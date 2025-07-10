@@ -5,8 +5,13 @@ import { useSpring, animated, config } from '@react-spring/web';
 import { useDrag } from '@use-gesture/react';
 import { IoBarChart, IoPlaySkipForward } from 'react-icons/io5';
 import { Question } from '@/types/supabase';
-import { useAppKit, useAppKitAccount } from '@reown/appkit/react';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useAccount } from 'wagmi';
 import { getAllQuestions } from '@/lib/admin';
+import { useAuth } from '@/hooks/useAuth';
+import UserProfile from '@/components/UserProfile';
+import Leaderboard from '@/components/Leaderboard';
+import { Menu, X } from 'lucide-react';
 
 const { innerWidth: screenWidth, innerHeight: screenHeight } = typeof window !== 'undefined' ? window : { innerWidth: 0, innerHeight: 0 };
 
@@ -433,9 +438,7 @@ const SwipeCard = ({
 
 // Wallet Button Component
 const WalletButton = ({ onWalletChange }: { onWalletChange: (address: string | null) => void }) => {
-  // Temporarily disabled wallet connection
-  const isConnected = false;
-  const address: string | null = null;
+  const { address, isConnected } = useAccount();
 
   useEffect(() => {
     onWalletChange(isConnected ? address || null : null);
@@ -443,26 +446,7 @@ const WalletButton = ({ onWalletChange }: { onWalletChange: (address: string | n
 
   return (
     <div className="wallet-button-container">
-      {isConnected ? (
-        <div className="wallet-connected-container">
-          <div className="wallet-address">
-            {address ? `${(address as string).slice(0, 6)}...${(address as string).slice(-4)}` : 'Unknown'}
-          </div>
-          <button
-            onClick={() => console.log('Disconnect clicked')}
-            className="wallet-disconnect-btn"
-          >
-            Disconnect
-          </button>
-        </div>
-      ) : (
-        <button
-          onClick={() => console.log('Connect wallet clicked')}
-          className="wallet-connect-button"
-        >
-          Connect Wallet
-        </button>
-      )}
+      <ConnectButton />
     </div>
   );
 };
@@ -476,6 +460,11 @@ export default function App() {
   const [connectedWallet, setConnectedWallet] = useState<string | null>(null);
   const [explosions, setExplosions] = useState<any[]>([]);
   const [calmMode, setCalmMode] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  const { user, isAuthenticated, incrementSwipes, incrementCorrectPredictions } = useAuth();
 
   const safeMath = (value: number, fallback = 0) => {
     if (typeof value !== 'number' || isNaN(value) || !isFinite(value)) {
@@ -596,6 +585,12 @@ export default function App() {
     console.log('Swipe LEFT (NO):', item);
     
     try {
+      // Increment swipe count first
+      if (isAuthenticated && user) {
+        console.log('Incrementing swipes for user:', user.id);
+        await incrementSwipes();
+      }
+      
       const response = await fetch('/api/bets', {
         method: 'POST',
         headers: {
@@ -627,6 +622,12 @@ export default function App() {
     console.log('Swipe RIGHT (YES):', item);
     
     try {
+      // Increment swipe count first
+      if (isAuthenticated && user) {
+        console.log('Incrementing swipes for user:', user.id);
+        await incrementSwipes();
+      }
+      
       const response = await fetch('/api/bets', {
         method: 'POST',
         headers: {
@@ -654,8 +655,19 @@ export default function App() {
     nextCard();
   };
 
-  const handlePassCard = (item: any) => {
+  const handlePassCard = async (item: any) => {
     console.log('Pass card:', item);
+    
+    try {
+      // Increment swipe count for pass too
+      if (isAuthenticated && user) {
+        console.log('Incrementing swipes for pass, user:', user.id);
+        await incrementSwipes();
+      }
+    } catch (error) {
+      console.error('Error incrementing swipes:', error);
+    }
+    
     nextCard();
   };
 
@@ -727,8 +739,68 @@ export default function App() {
             </div>
           </div>
           <div className="header-right">
-            <WalletButton onWalletChange={handleWalletChange} />
+            {/* Desktop Buttons */}
+            <div className="desktop-buttons">
+              {isAuthenticated && (
+                <>
+                  <button
+                    onClick={() => setShowLeaderboard(true)}
+                    className="header-btn leaderboard-btn"
+                    title="Leaderboard"
+                  >
+                    <span className="btn-text">Leaderboard</span>
+                  </button>
+                  <button
+                    onClick={() => setShowProfile(true)}
+                    className="header-btn profile-btn"
+                    title="Profile"
+                  >
+                    <span className="btn-text">Profile</span>
+                  </button>
+                </>
+              )}
+              <WalletButton onWalletChange={handleWalletChange} />
+            </div>
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="mobile-menu-btn"
+              title="Menu"
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
           </div>
+
+          {/* Mobile Menu */}
+          {mobileMenuOpen && (
+            <div className="mobile-menu">
+              <div className="mobile-menu-content">
+                {isAuthenticated && (
+                  <>
+                    <button
+                      onClick={() => {
+                        setShowLeaderboard(true);
+                        setMobileMenuOpen(false);
+                      }}
+                      className="mobile-menu-item"
+                    >
+                      <span>Leaderboard</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowProfile(true);
+                        setMobileMenuOpen(false);
+                      }}
+                      className="mobile-menu-item"
+                    >
+                      <span>Profile</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="cards-container">
@@ -770,6 +842,18 @@ export default function App() {
             onComplete={() => removeExplosion(explosion.id)}
           />
         ))}
+        
+        {/* User Profile Modal */}
+        <UserProfile 
+          isOpen={showProfile} 
+          onClose={() => setShowProfile(false)} 
+        />
+        
+        {/* Leaderboard Modal */}
+        <Leaderboard 
+          isOpen={showLeaderboard} 
+          onClose={() => setShowLeaderboard(false)} 
+        />
       </div>
     </div>
   );
