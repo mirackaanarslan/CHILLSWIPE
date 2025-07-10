@@ -1,0 +1,31 @@
+{
+  "name": "prediction-market-app",
+  "version": "1.0.0",
+  "description": "Scalable prediction market application with Firebase",
+  "main": "index.js",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend", 
+    "shared"
+  ],
+  "scripts": {
+    "dev": "npm run dev:frontend",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run serve",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "deploy": "npm run deploy:frontend && npm run deploy:backend", 
+    "deploy:frontend": "cd frontend && npm run deploy",
+    "deploy:backend": "cd backend && npm run deploy",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install && cd ../shared && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.2.2"
+  },
+  "keywords": ["prediction", "market", "firebase", "nextjs", "typescript"],
+  "author": "Your Name",
+  "license": "MIT"
+} 

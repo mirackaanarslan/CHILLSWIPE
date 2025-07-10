@@ -1,0 +1,71 @@
+# Prediction Market App - Development Plan
+
+## Core Features
+- name: User Authentication
+  description: Firebase Auth ile giriş/kayıt sistemi
+  priority: high
+  
+- name: Market Creation
+  description: Admin panelinde yeni prediction marketlar oluşturma
+  priority: high
+  
+- name: Question Management  
+  description: Soruların CRUD işlemleri ve kategorilere ayrılması
+  priority: high
+  
+- name: Betting System
+  description: Kullanıcıların tahmin yapabilmesi ve bahis sistemi
+  priority: high
+  
+- name: Real-time Updates
+  description: Oranların ve sonuçların real-time güncellenmesi
+  priority: high
+
+## Advanced Features
+- name: Live Odds Calculation
+  description: Dinamik oran hesaplama algoritması
+  priority: medium
+  
+- name: Leaderboard
+  description: En başarılı tahminciların sıralaması
+  priority: medium
+  
+- name: Portfolio Tracking
+  description: Kullanıcının portföy takibi ve geçmiş performansı
+  priority: medium
+  
+- name: Social Features
+  description: Yorumlar, takip sistemi, sosyal etkileşim
+  priority: low
+  
+- name: Analytics Dashboard
+  description: Admin için detaylı analytics ve raporlar
+  priority: low
+
+## Technical Requirements
+- name: Scalable Architecture
+  description: Microservices yaklaşımı ile modüler yapı
+  
+- name: Real-time Database
+  description: Firestore ile real-time data synchronization
+  
+- name: Serverless Backend
+  description: Cloud Functions ile serverless API
+  
+- name: Type Safety
+  description: TypeScript kullanımı (frontend + backend)
+  
+- name: State Management
+  description: Redux Toolkit veya Zustand ile state yönetimi
+  
+- name: Mobile Responsive
+  description: Tüm cihazlarda optimize çalışma
+
+## Database Schema (Firestore)
+- collections:
+  - users: Kullanıcı profilleri
+  - markets: Prediction marketlar
+  - questions: Sorular ve kategoriler  
+  - bets: Kullanıcı bahisleri
+  - transactions: Para hareketleri
+  - categories: Soru kategorileri
