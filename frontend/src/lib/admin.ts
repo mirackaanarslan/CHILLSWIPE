@@ -76,6 +76,19 @@ export const getAllQuestions = async (): Promise<Question[]> => {
   }
 }
 
+// Manual mapping for question title to market address
+export function getMarketAddressForQuestion(id: string, title: string): string | null {
+  const marketAddressMap: Record<string, string> = {
+    // "Will Navas start?" (Supabase questionId = örnek id, gerçek id'yi sen vereceksin)
+    '2f71b072-e0aa-472c-a771-d9644fe6ce5a': '0x9E77933302AEB5841C07be533512cd6586D0a102',
+
+    // Yeni sorular buraya eklenebilir
+    // 'some-question-id': '0xSomeMarketAddress',
+  };
+
+  return marketAddressMap[id] || null;
+}
+
 // Get question by ID
 export const getQuestionById = async (questionId: string): Promise<Question> => {
   try {

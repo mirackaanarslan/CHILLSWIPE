@@ -1,0 +1,132 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import "./PredictionMarket.sol";
+
+contract PredictionFactory {
+    address[] public allMarkets;
+
+    event MarketCreated(address indexed marketAddress, address indexed creator);
+
+    function createMarket(
+        string memory question,
+        address token,
+        uint256 endTime
+    ) external returns (address) {
+        PredictionMarket market = new PredictionMarket();
+        market.initialize(question, token, endTime, msg.sender);
+
+        allMarkets.push(address(market));
+        emit MarketCreated(address(market), msg.sender);
+        return address(market);
+    }
+
+    function getAllMarkets() external view returns (address[] memory) {
+        return allMarkets;
+    }
+}
+
+
+------
+
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract FanToken is ERC20, Ownable {
+    constructor(address initialOwner, string memory name, string memory symbol)
+        ERC20(name, symbol)
+        Ownable(initialOwner)
+    {
+        _mint(initialOwner, 1_000_000 * 1e18); // Initial mint
+    }
+
+    function mint(address to, uint256 amount) external onlyOwner {
+        _mint(to, amount);
+    }
+}
+
+
+
+------
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+contract PredictionMarket {
+    enum Choice { None, Yes, No }
+
+    struct Bet {
+        Choice choice;
+        uint256 amount;
+    }
+
+    string public question;
+    IERC20 public token;
+    address public creator;
+    uint256 public endTime;
+    bool public initialized;
+
+    uint256 public totalYes;
+    uint256 public totalNo;
+    bool public resolved;
+    Choice public outcome;
+
+    mapping(address => Bet[]) public bets;
+
+    event BetPlaced(address indexed user, bool voteYes, uint256 amount);
+    event MarketResolved(bool outcomeIsYes);
+
+    function initialize(
+        string memory _question,
+        address _token,
+        uint256 _endTime,
+        address _creator
+    ) external {
+        require(!initialized, "Already initialized");
+        initialized = true;
+
+        question = _question;
+        token = IERC20(_token);
+        endTime = _endTime;
+        creator = _creator;
+    }
+
+    function placeBet(bool voteYes, uint256 amount) external {
+        require(block.timestamp < endTime, "Betting closed");
+        require(amount > 0, "Invalid amount");
+
+        token.transferFrom(msg.sender, address(this), amount);
+
+        Choice betChoice = voteYes ? Choice.Yes : Choice.No;
+        bets[msg.sender].push(Bet(betChoice, amount));
+
+        if (voteYes) {
+            totalYes += amount;
+        } else {
+            totalNo += amount;
+        }
+
+        emit BetPlaced(msg.sender, voteYes, amount);
+    }
+
+    function getUserBets(address user) external view returns (Bet[] memory) {
+        return bets[user];
+    }
+
+    function resolveMarket(bool outcomeIsYes) external {
+        require(msg.sender == creator, "Only creator can resolve");
+        require(block.timestamp >= endTime, "Too early");
+        require(!resolved, "Already resolved");
+
+        resolved = true;
+        outcome = outcomeIsYes ? Choice.Yes : Choice.No;
+
+        emit MarketResolved(outcomeIsYes);
+    }
+}

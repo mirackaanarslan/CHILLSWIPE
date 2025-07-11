@@ -8,11 +8,11 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "deploy": "npm run build && firebase deploy --only hosting"
+    "deploy": "npm run build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.2",
-    "@prediction-market/shared": "^1.0.0",
+
     "@rainbow-me/rainbowkit": "^2.2.8",
     "@react-spring/web": "^10.0.1",
     "@reduxjs/toolkit": "^1.9.7",
@@ -21,6 +21,7 @@
     "@use-gesture/react": "^10.3.1",
     "autoprefixer": "^10.4.16",
     "date-fns": "^2.30.0",
+    "ethers": "^6.15.0",
     "framer-motion": "^10.16.4",
     "lucide-react": "^0.288.0",
     "next": "14.0.0",

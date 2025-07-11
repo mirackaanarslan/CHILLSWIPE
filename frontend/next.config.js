@@ -10,15 +10,8 @@ const nextConfig = {
   },
   images: {
     domains: [
-      'firebasestorage.googleapis.com',
       'lh3.googleusercontent.com', // Google Auth profile pics
     ],
-  },
-  // Environment variables that should be available to the client
-  env: {
-    NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-    NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   },
   // Fix for undici and other Node.js modules
   webpack: (config, { isServer, webpack }) => {

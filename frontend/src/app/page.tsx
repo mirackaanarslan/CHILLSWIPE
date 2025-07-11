@@ -6,12 +6,42 @@ import { useDrag } from '@use-gesture/react';
 import { IoBarChart, IoPlaySkipForward } from 'react-icons/io5';
 import { Question } from '@/types/supabase';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { useAccount } from 'wagmi';
-import { getAllQuestions } from '@/lib/admin';
+import { useAccount, usePublicClient } from 'wagmi';
+import { getAllQuestions, getMarketAddressForQuestion } from '@/lib/admin';
 import { useAuth } from '@/hooks/useAuth';
 import UserProfile from '@/components/UserProfile';
 import Leaderboard from '@/components/Leaderboard';
 import { Menu, X } from 'lucide-react';
+import { useContracts } from '@/hooks/useContracts';
+import { MarketCard } from '@/components/MarketCard';
+import { MarketsModal } from '@/components/MarketsModal';
+import { ethers } from 'ethers';
+
+// Contract ABIs
+const PREDICTION_MARKET_ABI = [
+  'function placeBet(bool voteYes, uint256 amount) external',
+  'function totalYes() public view returns (uint256)',
+  'function totalNo() public view returns (uint256)',
+  'function question() public view returns (string memory)',
+  'function endTime() public view returns (uint256)',
+  'function getUserBets(address user) public view returns (tuple(uint8 choice, uint256 amount)[])',
+  'function resolveMarket(bool outcomeIsYes) external',
+  'function initialized() public view returns (bool)',
+  'function creator() public view returns (address)',
+  'function token() public view returns (address)',
+  'event BetPlaced(address indexed user, bool voteYes, uint256 amount)',
+  'event MarketResolved(bool outcomeIsYes)'
+];
+
+const FAN_TOKEN_ABI = [
+  'function approve(address spender, uint256 amount) external returns (bool)',
+  'function balanceOf(address owner) external view returns (uint256)',
+  'function allowance(address owner, address spender) external view returns (uint256)',
+  'function transferFrom(address sender, address recipient, uint256 amount) external returns (bool)'
+];
+
+// Contract addresses
+const FAN_TOKEN_ADDRESS = '0xEAF931e3F317BF79E3E8FCEea492Efa013087998';
 
 const { innerWidth: screenWidth, innerHeight: screenHeight } = typeof window !== 'undefined' ? window : { innerWidth: 0, innerHeight: 0 };
 
@@ -230,7 +260,8 @@ const SwipeCard = ({
   onPass, 
   betAmount, 
   isTop, 
-  onExplosion 
+  onExplosion,
+  isPlacingBet
 }: {
   item: any;
   onSwipeLeft: (item: any) => void;
@@ -239,6 +270,7 @@ const SwipeCard = ({
   betAmount: number;
   isTop: boolean;
   onExplosion?: (direction: 'left' | 'right') => void;
+  isPlacingBet?: boolean;
 }) => {
   const [showFullDescription, setShowFullDescription] = useState(false);
   
@@ -257,6 +289,9 @@ const SwipeCard = ({
     return value;
   };
 
+  // Debug state to track if swipe is already being processed
+  const [isProcessingSwipe, setIsProcessingSwipe] = useState(false);
+
   const bind = useDrag(
     ({ down, movement = [0, 0], velocity = [0, 0], cancel }) => {
       if (!isTop) return;
@@ -273,7 +308,8 @@ const SwipeCard = ({
       
       const dir = safeX < 0 ? -1 : 1;
 
-      if (!down && isGone) {
+      if (!down && isGone && !isProcessingSwipe) {
+        setIsProcessingSwipe(true);
         cancel();
         
         if (onExplosion) {
@@ -294,6 +330,8 @@ const SwipeCard = ({
           } else {
             onSwipeRight(item);
           }
+          // Reset processing flag after a delay
+          setTimeout(() => setIsProcessingSwipe(false), 500);
         }, 150);
       } else {
         api.start({
@@ -327,6 +365,7 @@ const SwipeCard = ({
         zIndex: isTop ? 3 : 2,
       }}
     >
+
       <div 
         className="card-content"
         style={{
@@ -463,8 +502,25 @@ export default function App() {
   const [showProfile, setShowProfile] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showMarkets, setShowMarkets] = useState(false);
+  const [isPlacingBet, setIsPlacingBet] = useState(false);
+  const [approvalStatus, setApprovalStatus] = useState<{[marketAddress: string]: boolean}>({});
   
   const { user, isAuthenticated, incrementSwipes, incrementCorrectPredictions } = useAuth();
+  const publicClient = usePublicClient();
+  
+  // Contract integration - using wagmi client directly
+  const {
+    markets,
+    loading: marketsLoading,
+    error: marketsError,
+    userBalance,
+    fetchMarkets,
+    fetchUserBalance,
+    placeBet: placeBetFromHook,
+    checkApproval,
+    approveMarket
+  } = useContracts(publicClient as any, undefined);
 
   const safeMath = (value: number, fallback = 0) => {
     if (typeof value !== 'number' || isNaN(value) || !isFinite(value)) {
@@ -577,82 +633,226 @@ export default function App() {
     fetchQuestions();
   }, []);
 
+  // Fetch markets when wallet is connected
+  useEffect(() => {
+    if (connectedWallet) {
+      fetchMarkets(connectedWallet);
+      fetchUserBalance(connectedWallet);
+    }
+  }, [connectedWallet, fetchMarkets, fetchUserBalance]);
+
   const handleWalletChange = (address: string | null) => {
     setConnectedWallet(address);
+    // Clear approval status when wallet changes
+    if (!address) {
+      setApprovalStatus({});
+    }
+  };
+
+  // Shared bet placement function to prevent duplicate code
+  const placeBetOnMarket = async (item: any, voteYes: boolean) => {
+    console.log(`Placing bet: ${voteYes ? 'YES' : 'NO'} on item:`, item);
+    console.log('Current betAmount:', betAmount);
+    console.log('Connected wallet:', connectedWallet);
+    
+    // Prevent duplicate transactions
+    if (isPlacingBet) {
+      console.log('Bet already in progress, skipping...');
+      return;
+    }
+    
+    // Check if wallet is connected
+    if (!connectedWallet) {
+      console.log('No wallet connected, showing warning but continuing');
+      console.warn('Wallet not connected - bet will not be recorded');
+      nextCard();
+      return;
+    }
+    
+    // Check if we have a market address for this question
+    const marketAddress = getMarketAddressForQuestion(item.id, item.title);
+    if (!marketAddress) {
+      console.log('No market address found for question:', item.id, 'title:', item.title);
+      alert('This question is not available for betting yet');
+      nextCard();
+      return;
+    }
+    
+    console.log('Market address for question:', marketAddress);
+    
+    setIsPlacingBet(true);
+    
+    try {
+      // Increment swipe count first
+      if (isAuthenticated && user) {
+        console.log('Incrementing swipes for user:', user.id);
+        await incrementSwipes();
+      }
+      
+      // Get signer from wallet
+      if (!publicClient) {
+        throw new Error('No public client available');
+      }
+      
+      // Use window.ethereum directly for provider
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      
+      // Create contract instances
+      const market = new ethers.Contract(marketAddress, PREDICTION_MARKET_ABI, signer);
+      const fanToken = new ethers.Contract(FAN_TOKEN_ADDRESS, FAN_TOKEN_ABI, signer);
+      
+      // Check if contract is initialized
+      console.log('Checking contract initialization...');
+      try {
+        const initialized = await market.initialized();
+        console.log('Contract initialized:', initialized);
+        
+        if (!initialized) {
+          throw new Error('Contract is not initialized');
+        }
+        
+        const creator = await market.creator();
+        console.log('Contract creator:', creator);
+        
+        const tokenAddress = await market.token();
+        console.log('Contract token address:', tokenAddress);
+        
+        console.log('Contract is properly initialized');
+      } catch (initError) {
+        console.error('Contract initialization check failed:', initError);
+        throw new Error('Contract initialization check failed: ' + initError.message);
+      }
+      
+      // Convert amount to wei (18 decimals)
+      const amountInWei = ethers.parseUnits(betAmount.toString(), 18);
+      
+      console.log('Placing bet with amount:', amountInWei.toString());
+      
+      // Check user balance
+      const userBalance = await fanToken.balanceOf(connectedWallet);
+      console.log('User balance:', userBalance.toString());
+      
+      if (userBalance < amountInWei) {
+        throw new Error(`Insufficient balance. You have ${ethers.formatUnits(userBalance, 18)} PSG, but trying to bet ${betAmount} PSG`);
+      }
+      
+      // Check allowance
+      const allowance = await fanToken.allowance(connectedWallet, marketAddress);
+      console.log('Current allowance:', allowance.toString());
+      
+      if (allowance < amountInWei) {
+        console.log('Approval needed, requesting approval...');
+        
+        // Check if we're already in the process of approving this market
+        if (approvalStatus[marketAddress]) {
+          console.log('Approval already in progress for this market, waiting...');
+          // Wait a bit and check again
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          const newAllowance = await fanToken.allowance(connectedWallet, marketAddress);
+          if (newAllowance < amountInWei) {
+            throw new Error('Approval is taking too long. Please try again.');
+          }
+        } else {
+          // Set approval status to prevent duplicate approvals
+          setApprovalStatus(prev => ({ ...prev, [marketAddress]: true }));
+          
+          try {
+            const approveTx = await fanToken.approve(marketAddress, amountInWei);
+            console.log('Approval transaction sent:', approveTx.hash);
+            
+            // Wait for approval confirmation
+            const approveReceipt = await approveTx.wait();
+            console.log('Approval confirmed on-chain:', approveReceipt.hash);
+            
+            // Double-check allowance after approval
+            const finalAllowance = await fanToken.allowance(connectedWallet, marketAddress);
+            console.log('Final allowance after approval:', finalAllowance.toString());
+            
+            if (finalAllowance < amountInWei) {
+              throw new Error('Approval was confirmed but allowance is still insufficient');
+            }
+          } finally {
+            // Clear approval status
+            setApprovalStatus(prev => ({ ...prev, [marketAddress]: false }));
+          }
+        }
+      }
+      
+      // Place the bet
+      console.log('Placing bet on market...');
+      console.log('Market address:', marketAddress);
+      console.log('Vote yes:', voteYes);
+      console.log('Amount in wei:', amountInWei.toString());
+      
+      // Log the transaction data that will be sent
+      const placeBetData = market.interface.encodeFunctionData('placeBet', [voteYes, amountInWei]);
+      console.log('Transaction data:', placeBetData);
+      console.log('Market interface:', market.interface);
+      console.log('Market interface functions:', Object.keys(market.interface.fragments));
+      
+      // Check if placeBet function exists in ABI
+      const placeBetFunction = market.interface.getFunction('placeBet');
+      console.log('placeBet function:', placeBetFunction);
+      console.log('placeBet function signature:', placeBetFunction?.format());
+      
+      try {
+        const betTx = await market.placeBet(voteYes, amountInWei);
+        console.log('Bet transaction sent:', betTx.hash);
+        console.log('Transaction object:', betTx);
+        
+        const receipt = await betTx.wait();
+        console.log('Transaction receipt:', receipt);
+        
+        if (receipt.status === 0) {
+          console.error('Transaction failed on chain. Receipt:', receipt);
+          throw new Error('Transaction failed on chain - status 0');
+        }
+        
+        console.log('Bet confirmed successfully!');
+        console.log('Transaction logs:', receipt.logs);
+        
+        // Refresh markets after successful bet
+        if (connectedWallet) {
+          await fetchMarkets(connectedWallet);
+        }
+        
+        alert('Bet placed successfully! Transaction: ' + betTx.hash);
+        
+        // Only move to next card after successful bet
+        nextCard();
+      } catch (txError) {
+        console.error('Transaction error details:', {
+          error: txError,
+          message: txError.message,
+          code: txError.code,
+          data: txError.data,
+          transaction: txError.transaction,
+          receipt: txError.receipt
+        });
+        
+        // Check if it's a contract revert
+        if (txError.data) {
+          console.error('Contract revert data:', txError.data);
+        }
+        
+        throw txError;
+      }
+      
+    } catch (error) {
+      console.error('Error placing bet:', error);
+      alert('Failed to place bet: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setIsPlacingBet(false);
+    }
   };
 
   const handleSwipeLeft = async (item: any) => {
-    console.log('Swipe LEFT (NO):', item);
-    
-    try {
-      // Increment swipe count first
-      if (isAuthenticated && user) {
-        console.log('Incrementing swipes for user:', user.id);
-        await incrementSwipes();
-      }
-      
-      const response = await fetch('/api/bets', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          questionId: item.id,
-          outcome: 'NO',
-          amount: betAmount,
-          wallet: connectedWallet
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to place bet');
-      }
-      
-      const result = await response.json();
-      console.log('Bet placed successfully:', result);
-      
-    } catch (error) {
-      console.error('Error placing bet:', error);
-    }
-    
-    nextCard();
+    await placeBetOnMarket(item, false); // false = NO
   };
 
   const handleSwipeRight = async (item: any) => {
-    console.log('Swipe RIGHT (YES):', item);
-    
-    try {
-      // Increment swipe count first
-      if (isAuthenticated && user) {
-        console.log('Incrementing swipes for user:', user.id);
-        await incrementSwipes();
-      }
-      
-      const response = await fetch('/api/bets', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          questionId: item.id,
-          outcome: 'YES',
-          amount: betAmount,
-          wallet: connectedWallet
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to place bet');
-      }
-      
-      const result = await response.json();
-      console.log('Bet placed successfully:', result);
-      
-    } catch (error) {
-      console.error('Error placing bet:', error);
-    }
-    
-    nextCard();
+    await placeBetOnMarket(item, true); // true = YES
   };
 
   const handlePassCard = async (item: any) => {
@@ -741,6 +941,13 @@ export default function App() {
           <div className="header-right">
             {/* Desktop Buttons */}
             <div className="desktop-buttons">
+              <button
+                onClick={() => setShowMarkets(true)}
+                className="header-btn markets-btn"
+                title="Markets"
+              >
+                <span className="btn-text">Markets</span>
+              </button>
               {isAuthenticated && (
                 <>
                   <button
@@ -776,6 +983,15 @@ export default function App() {
           {mobileMenuOpen && (
             <div className="mobile-menu">
               <div className="mobile-menu-content">
+                <button
+                  onClick={() => {
+                    setShowMarkets(true);
+                    setMobileMenuOpen(false);
+                  }}
+                  className="mobile-menu-item"
+                >
+                  <span>Markets</span>
+                </button>
                 {isAuthenticated && (
                   <>
                     <button
@@ -809,6 +1025,8 @@ export default function App() {
             setBetAmount={setBetAmount} 
           />
           
+
+          
           {currentCard && (
             <SwipeCard
               key={currentCard.id}
@@ -819,6 +1037,7 @@ export default function App() {
               onExplosion={handleExplosion}
               betAmount={betAmount}
               isTop={true}
+              isPlacingBet={isPlacingBet}
             />
           )}
         </div>
@@ -853,6 +1072,18 @@ export default function App() {
         <Leaderboard 
           isOpen={showLeaderboard} 
           onClose={() => setShowLeaderboard(false)} 
+        />
+        
+        {/* Markets Modal */}
+        <MarketsModal
+          isOpen={showMarkets}
+          onClose={() => setShowMarkets(false)}
+          markets={markets}
+          userAddress={connectedWallet || undefined}
+          userBalance={userBalance || undefined}
+          onPlaceBet={placeBetFromHook}
+          onApprove={approveMarket}
+          checkApproval={checkApproval}
         />
       </div>
     </div>
