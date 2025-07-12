@@ -16,4 +16,12 @@ export interface CreateQuestionData {
   category: string
   image_url: string
   coin: 'PSG' | 'BAR'
+}
+
+export interface User {
+  id: string
+  email: string
+  role: 'user' | 'admin'
+  created_at: string
+  updated_at: string
 } 

@@ -1,9 +1,19 @@
 import { questionsService, storageService } from './supabase-service'
 import { CreateQuestionData, Question } from '@/types/supabase'
 
+// Simple admin auth check
+const checkAdminAuth = (): boolean => {
+  const adminSession = localStorage.getItem('admin_session')
+  return !!adminSession
+}
+
 // Add a new question
 export const addQuestion = async (questionData: CreateQuestionData): Promise<string> => {
   try {
+    if (!checkAdminAuth()) {
+      throw new Error('Admin authentication required')
+    }
+    
     console.log('Adding question with data:', questionData)
     
     // Validate required fields
@@ -36,6 +46,10 @@ export const addQuestion = async (questionData: CreateQuestionData): Promise<str
 // Update a question
 export const updateQuestion = async (questionId: string, updates: Partial<CreateQuestionData>): Promise<void> => {
   try {
+    if (!checkAdminAuth()) {
+      throw new Error('Admin authentication required')
+    }
+    
     console.log('Updating question:', questionId, 'with data:', updates)
     
     // Validate required fields if they're being updated
@@ -62,6 +76,10 @@ export const updateQuestion = async (questionId: string, updates: Partial<Create
 // Delete a question
 export const deleteQuestion = async (questionId: string): Promise<void> => {
   try {
+    if (!checkAdminAuth()) {
+      throw new Error('Admin authentication required')
+    }
+    
     console.log('Deleting question:', questionId)
     await questionsService.delete(questionId)
     console.log('Question deleted successfully')
@@ -115,6 +133,10 @@ export const getQuestionById = async (questionId: string): Promise<Question> => 
 // Upload image and return URL
 export const uploadQuestionImage = async (file: File): Promise<string> => {
   try {
+    if (!checkAdminAuth()) {
+      throw new Error('Admin authentication required')
+    }
+    
     console.log('Uploading image:', file.name)
     const fileName = `${Date.now()}-${file.name}`
     const imageUrl = await storageService.uploadImage(file, fileName)

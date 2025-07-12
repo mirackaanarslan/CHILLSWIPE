@@ -1,15 +1,19 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Question } from '@/types/supabase';
 import { AddQuestionForm } from '@/components/admin/AddQuestionForm';
 import { QuestionList } from '@/components/admin/QuestionList';
 import { getAllQuestions } from '@/lib/admin';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 
 const AdminPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'add' | 'manage'>('add');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
+  const { isAuthenticated, loading: authLoading, logout } = useAdminAuth();
+  const router = useRouter();
 
   const loadQuestions = async () => {
     try {
@@ -24,12 +28,37 @@ const AdminPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadQuestions();
-  }, []);
+    // Check authentication
+    if (!authLoading && !isAuthenticated) {
+      router.push('/admin/login');
+      return;
+    }
+
+    if (isAuthenticated) {
+      loadQuestions();
+    }
+  }, [isAuthenticated, authLoading, router]);
 
   const handleQuestionAdded = () => {
     loadQuestions();
   };
+
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to login if not authenticated
+  if (!isAuthenticated) {
+    return null; // Will redirect in useEffect
+  }
 
   return (
     <div className="admin-container">
@@ -55,6 +84,12 @@ const AdminPage: React.FC = () => {
               <span className="stat-label">Questions</span>
               <span className="stat-value">{questions.length}</span>
             </div>
+            <button
+              onClick={logout}
+              className="logout-button"
+            >
+              <span className="button-text">Logout</span>
+            </button>
           </div>
         </div>
       </div>
