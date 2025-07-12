@@ -14,7 +14,7 @@ import Leaderboard from '@/components/Leaderboard';
 import { Menu, X } from 'lucide-react';
 import { useContracts } from '@/hooks/useContracts';
 import { MarketCard } from '@/components/MarketCard';
-import { MarketsModal } from '@/components/MarketsModal';
+
 import { ethers } from 'ethers';
 
 // Contract ABIs
@@ -164,7 +164,7 @@ const AmountSelector = ({ betAmount, setBetAmount }: { betAmount: number; setBet
       {/* Desktop Version */}
       <div className="amount-display-section">
         <div className="amount-display">
-          <span className="amount-label">Bet Amount</span>
+          <span className="amount-label">Prediction Amount</span>
           <span className="amount-value">{betAmount.toFixed(2)}</span>
         </div>
       </div>
@@ -225,7 +225,7 @@ const AmountSelector = ({ betAmount, setBetAmount }: { betAmount: number; setBet
 
       {/* Mobile Version */}
       <div className="mobile-amount-selector">
-        <div className="mobile-amount-title">Bet Amount</div>
+                      <div className="mobile-amount-title">Prediction Amount</div>
         <div className="mobile-amount-controls">
           <button 
             className="mobile-amount-btn"
@@ -456,7 +456,7 @@ const SwipeCard = ({
 
           <div className="bottom-actions">
             <div className="bet-display">
-              <div className="bet-label">Your Bet</div>
+                              <div className="bet-label">Your Prediction</div>
               <div className="bet-amount-large">{betAmount.toFixed(2)}</div>
             </div>
             <button 
@@ -502,7 +502,7 @@ export default function App() {
   const [showProfile, setShowProfile] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [showMarkets, setShowMarkets] = useState(false);
+
   const [isPlacingBet, setIsPlacingBet] = useState(false);
   const [approvalStatus, setApprovalStatus] = useState<{[marketAddress: string]: boolean}>({});
   
@@ -1066,13 +1066,9 @@ export default function App() {
           <div className="header-left">
             <div className="logo-section">
               <div className="logo-container">
-                <div className="logo-icon">
-                  <div className="logo-pulse"></div>
-                  <span className="logo-symbol">PP</span>
-                </div>
+                <img src="/logo.png" alt="PSG Predict Logo" className="logo-image" />
                 <div className="logo-text">
-                  <h1 className="header-title">PSG Predict</h1>
-                  <p className="header-subtitle">Swipe for victory</p>
+                  <h1 className="header-title">CHILLSWIPE</h1>
                 </div>
               </div>
             </div>
@@ -1080,13 +1076,6 @@ export default function App() {
           <div className="header-right">
             {/* Desktop Buttons */}
             <div className="desktop-buttons">
-              <button
-                onClick={() => setShowMarkets(true)}
-                className="header-btn markets-btn"
-                title="Markets"
-              >
-                <span className="btn-text">Markets</span>
-              </button>
               {isAuthenticated && (
                 <>
                   <button
@@ -1118,41 +1107,45 @@ export default function App() {
             </button>
           </div>
 
-          {/* Mobile Menu */}
+          {/* Mobile Menu Overlay */}
           {mobileMenuOpen && (
-            <div className="mobile-menu">
-              <div className="mobile-menu-content">
-                <button
-                  onClick={() => {
-                    setShowMarkets(true);
-                    setMobileMenuOpen(false);
-                  }}
-                  className="mobile-menu-item"
-                >
-                  <span>Markets</span>
-                </button>
-                {isAuthenticated && (
-                  <>
-                    <button
-                      onClick={() => {
-                        setShowLeaderboard(true);
-                        setMobileMenuOpen(false);
-                      }}
-                      className="mobile-menu-item"
-                    >
-                      <span>Leaderboard</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowProfile(true);
-                        setMobileMenuOpen(false);
-                      }}
-                      className="mobile-menu-item"
-                    >
-                      <span>Profile</span>
-                    </button>
-                  </>
-                )}
+            <div className="mobile-menu-overlay" onClick={() => setMobileMenuOpen(false)}>
+              <div className="mobile-menu" onClick={(e) => e.stopPropagation()}>
+                <div className="mobile-menu-header">
+                  <h3 className="mobile-menu-title">Menu</h3>
+                  <button
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="mobile-menu-close"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="mobile-menu-content">
+                  {isAuthenticated && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setShowLeaderboard(true);
+                          setMobileMenuOpen(false);
+                        }}
+                        className="mobile-menu-item"
+                      >
+                        <span className="mobile-menu-icon">🏆</span>
+                        <span>Leaderboard</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowProfile(true);
+                          setMobileMenuOpen(false);
+                        }}
+                        className="mobile-menu-item"
+                      >
+                        <span className="mobile-menu-icon">👤</span>
+                        <span>Profile</span>
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -1213,17 +1206,7 @@ export default function App() {
           onClose={() => setShowLeaderboard(false)} 
         />
         
-        {/* Markets Modal */}
-        <MarketsModal
-          isOpen={showMarkets}
-          onClose={() => setShowMarkets(false)}
-          markets={markets}
-          userAddress={connectedWallet || undefined}
-          userBalance={userBalances?.PSG || undefined}
-          onPlaceBet={placeBetFromHook}
-          onApprove={approveMarket}
-          checkApproval={checkApproval}
-        />
+
       </div>
     </div>
   );

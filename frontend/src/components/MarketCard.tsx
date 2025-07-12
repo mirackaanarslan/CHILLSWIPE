@@ -87,7 +87,7 @@ export const MarketCard: React.FC<MarketCardProps> = ({
     const yesBets = data.userBets.filter(bet => bet.choice === 1);
     const noBets = data.userBets.filter(bet => bet.choice === 2);
     
-    let text = `Your bets: `;
+          let text = `Your predictions: `;
     if (yesBets.length > 0) {
       const yesAmount = yesBets.reduce((sum, bet) => sum + bet.amount, 0n);
       text += `YES (${formatAmount(yesAmount)}) `;
@@ -140,7 +140,7 @@ export const MarketCard: React.FC<MarketCardProps> = ({
       {!isMarketEnded() && userAddress && (
         <div className="bet-section">
           <div className="bet-input">
-            <label htmlFor="betAmount">Bet Amount (PSG):</label>
+            <label htmlFor="betAmount">Prediction Amount (PSG):</label>
             <input
               id="betAmount"
               type="number"
@@ -163,14 +163,14 @@ export const MarketCard: React.FC<MarketCardProps> = ({
               onClick={() => handleBet(true)}
               disabled={loading}
             >
-              {loading ? 'Processing...' : 'Bet YES'}
+              {loading ? 'Processing...' : 'Predict YES'}
             </button>
             <button
               className="bet-btn bet-no"
               onClick={() => handleBet(false)}
               disabled={loading}
             >
-              {loading ? 'Processing...' : 'Bet NO'}
+              {loading ? 'Processing...' : 'Predict NO'}
             </button>
           </div>
 
@@ -184,7 +184,7 @@ export const MarketCard: React.FC<MarketCardProps> = ({
 
       {!userAddress && (
         <div className="connect-wallet-message">
-          Connect your wallet to place bets
+          Connect your wallet to make predictions
         </div>
       )}
 

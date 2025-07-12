@@ -150,7 +150,7 @@ export default function UserProfile({ isOpen, onClose }: UserProfileProps) {
       <div className="profile-modal-content">
         {/* Header */}
         <div className="modal-header">
-          <h2 className="modal-title">Profile & Bet History</h2>
+          <h2 className="modal-title">Profile & Prediction History</h2>
           <button
             onClick={onClose}
             className="modal-close-btn"
@@ -178,7 +178,7 @@ export default function UserProfile({ isOpen, onClose }: UserProfileProps) {
           <div className="profile-stats">
             <div className="stat-card">
               <p className="stat-value swipes">{totalBets}</p>
-              <p className="stat-label">Total Bets</p>
+              <p className="stat-label">Total Predictions</p>
             </div>
             <div className="stat-card">
               <p className="stat-value correct">{correctBets}</p>
@@ -190,7 +190,7 @@ export default function UserProfile({ isOpen, onClose }: UserProfileProps) {
             </div>
             <div className="stat-card">
               <p className="stat-value total-amount">{totalBetAmount} CHZ</p>
-              <p className="stat-label">Total Bet</p>
+              <p className="stat-label">Total Prediction</p>
             </div>
           </div>
 
@@ -225,17 +225,17 @@ export default function UserProfile({ isOpen, onClose }: UserProfileProps) {
             </div>
           </div>
 
-          {/* Bet History Section */}
+          {/* Prediction History Section */}
           <div className="bet-history-section">
             <div className="history-header">
-              <h3 className="history-title">Bet History</h3>
+                              <h3 className="history-title">Prediction History</h3>
               <div className="history-filter">
                 <select
                   value={betFilter}
                   onChange={(e) => setBetFilter(e.target.value as BetFilter)}
                   className="history-filter-select"
                 >
-                  <option value="all">All Bets ({totalBets})</option>
+                                      <option value="all">All Predictions ({totalBets})</option>
                   <option value="active">Active ({activeBets})</option>
                   <option value="resolved">Resolved ({resolvedBets})</option>
                   <option value="claimed">Claimed ({claimedBets})</option>
