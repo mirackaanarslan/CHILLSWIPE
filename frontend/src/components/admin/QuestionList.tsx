@@ -85,7 +85,8 @@ export const QuestionList: React.FC<QuestionListProps> = ({
   const [editForm, setEditForm] = useState({
     title: '',
     description: '',
-    category: ''
+    category: '',
+    coin: 'PSG' as 'PSG' | 'BAR'
   });
   const [saving, setSaving] = useState(false);
 
@@ -121,7 +122,8 @@ export const QuestionList: React.FC<QuestionListProps> = ({
     setEditForm({
       title: question.title,
       description: question.description || '',
-      category: question.category
+      category: question.category,
+      coin: question.coin
     });
   };
 
@@ -139,13 +141,19 @@ export const QuestionList: React.FC<QuestionListProps> = ({
       return;
     }
 
+    if (!editForm.coin) {
+      toast.error('Question coin is required');
+      return;
+    }
+
     setSaving(true);
 
     try {
       // Prepare update data
       const updateData: any = {
         title: editForm.title.trim(),
-        category: editForm.category
+        category: editForm.category,
+        coin: editForm.coin
       };
 
       // Only include description if it's not empty
@@ -160,7 +168,7 @@ export const QuestionList: React.FC<QuestionListProps> = ({
       
       toast.success('Question updated successfully');
       setEditingQuestion(null);
-      setEditForm({ title: '', description: '', category: '' });
+      setEditForm({ title: '', description: '', category: '', coin: 'PSG' });
       onQuestionUpdated();
     } catch (error: any) {
       console.error('Error updating question:', error);
@@ -172,7 +180,7 @@ export const QuestionList: React.FC<QuestionListProps> = ({
 
   const handleCancelEdit = () => {
     setEditingQuestion(null);
-    setEditForm({ title: '', description: '', category: '' });
+    setEditForm({ title: '', description: '', category: '', coin: 'PSG' });
   };
 
   if (loading) {
@@ -239,6 +247,17 @@ export const QuestionList: React.FC<QuestionListProps> = ({
                   />
                 </div>
                 <div className="form-group">
+                  <label className="form-label">Coin *</label>
+                  <select
+                    value={editForm.coin}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, coin: e.target.value as 'PSG' | 'BAR' }))}
+                    className="form-input"
+                  >
+                    <option value="PSG">🔴 PSG</option>
+                    <option value="BAR">🔵 Barcelona</option>
+                  </select>
+                </div>
+                <div className="form-group">
                   <label className="form-label">Category *</label>
                   <select
                     value={editForm.category}
@@ -290,6 +309,14 @@ export const QuestionList: React.FC<QuestionListProps> = ({
                   <div className="question-meta">
                     <span className={`status-badge ${question.status}`}>
                       {question.status}
+                    </span>
+                    <span className="coin-badge">
+                      <span className="coin-icon">
+                        {question.coin === 'PSG' ? '🔴' : '🔵'}
+                      </span>
+                      <span className="coin-name">
+                        {question.coin}
+                      </span>
                     </span>
                     <span className="category-badge">
                       <span className="category-icon">

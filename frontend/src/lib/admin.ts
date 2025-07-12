@@ -19,6 +19,10 @@ export const addQuestion = async (questionData: CreateQuestionData): Promise<str
       throw new Error('Question category is required')
     }
     
+    if (!questionData.coin) {
+      throw new Error('Question coin is required')
+    }
+    
     const question = await questionsService.create(questionData)
     console.log('Question added successfully with ID:', question.id)
     
@@ -41,6 +45,10 @@ export const updateQuestion = async (questionId: string, updates: Partial<Create
     
     if (updates.category !== undefined && !updates.category?.trim()) {
       throw new Error('Question category is required')
+    }
+    
+    if (updates.coin !== undefined && !updates.coin) {
+      throw new Error('Question coin is required')
     }
     
     await questionsService.update(questionId, updates)
@@ -81,6 +89,8 @@ export function getMarketAddressForQuestion(id: string, title: string): string |
   const marketAddressMap: Record<string, string> = {
     // "Will Navas start?" (Supabase questionId = örnek id, gerçek id'yi sen vereceksin)
     '2f71b072-e0aa-472c-a771-d9644fe6ce5a': '0x9E77933302AEB5841C07be533512cd6586D0a102',
+    'ea60694c-8f0c-4c9c-a914-92be93496cad': '0x258d2677cc8c1a41c3b3a6d499b205cd48fc1cf2',
+    
 
     // Yeni sorular buraya eklenebilir
     // 'some-question-id': '0xSomeMarketAddress',
@@ -130,6 +140,10 @@ export const validateQuestionData = (data: CreateQuestionData): string[] => {
   
   if (!data.category?.trim()) {
     errors.push('Question category is required')
+  }
+  
+  if (!data.coin) {
+    errors.push('Question coin is required')
   }
   
   return errors

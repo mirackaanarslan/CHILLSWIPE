@@ -11,11 +11,30 @@ export class FanToken {
 
   constructor(
     provider: ethers.Provider,
-    signer?: ethers.Signer,
-    public address: string = '0xEAF931e3F317BF79E3E8FCEea492Efa013087998'
+    public address: string,
+    signer?: ethers.Signer
   ) {
     const signerOrProvider = signer ?? provider;
     this.contract = new ethers.Contract(this.address, FanTokenAbi, signerOrProvider);
+  }
+
+  // Static method to get token address based on coin type
+  static getTokenAddress(coin: 'PSG' | 'BAR'): string {
+    const tokenAddresses = {
+      'PSG': '0xEAF931e3F317BF79E3E8FCEea492Efa013087998',
+      'BAR': '0xdFAc77dB48d7bEDe8e40d059A44ffcddf84A99A3'
+    };
+    return tokenAddresses[coin] || tokenAddresses['PSG'];
+  }
+
+  // Factory method to create FanToken instance for specific coin
+  static createForCoin(
+    provider: ethers.Provider,
+    coin: 'PSG' | 'BAR',
+    signer?: ethers.Signer
+  ): FanToken {
+    const address = this.getTokenAddress(coin);
+    return new FanToken(provider, address, signer);
   }
 
   async balanceOf(user: string): Promise<bigint> {

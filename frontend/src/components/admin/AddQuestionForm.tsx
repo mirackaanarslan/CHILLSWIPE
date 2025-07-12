@@ -47,7 +47,8 @@ export const AddQuestionForm: React.FC<AddQuestionFormProps> = ({ onQuestionAdde
     title: '',
     description: '',
     category: 'match_result',
-    image_url: ''
+    image_url: '',
+    coin: 'PSG'
   });
   
   const [uploading, setUploading] = useState(false);
@@ -86,6 +87,11 @@ export const AddQuestionForm: React.FC<AddQuestionFormProps> = ({ onQuestionAdde
       return;
     }
 
+    if (!formData.coin) {
+      toast.error('Please select a coin');
+      return;
+    }
+
     setSubmitting(true);
     
     try {
@@ -104,7 +110,8 @@ export const AddQuestionForm: React.FC<AddQuestionFormProps> = ({ onQuestionAdde
         title: '',
         description: '',
         category: 'match_result',
-        image_url: ''
+        image_url: '',
+        coin: 'PSG'
       });
       
       onQuestionAdded();
@@ -132,6 +139,31 @@ export const AddQuestionForm: React.FC<AddQuestionFormProps> = ({ onQuestionAdde
           placeholder="Enter your prediction question..."
           required
         />
+      </div>
+
+      {/* Question Coin */}
+      <div className="form-group">
+        <label className="form-label">
+          Coin *
+        </label>
+        <div className="coin-selection">
+          <button
+            type="button"
+            onClick={() => handleInputChange('coin', 'PSG')}
+            className={`coin-option ${formData.coin === 'PSG' ? 'active' : ''}`}
+          >
+            <span className="coin-icon">🔴</span>
+            <span className="coin-name">PSG</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleInputChange('coin', 'BAR')}
+            className={`coin-option ${formData.coin === 'BAR' ? 'active' : ''}`}
+          >
+            <span className="coin-icon">🔵</span>
+            <span className="coin-name">Barcelona</span>
+          </button>
+        </div>
       </div>
 
       {/* Question Category */}

@@ -11,9 +11,28 @@ export const PredictionFactoryAbi = [
 export class PredictionFactory {
   contract: ethers.Contract;
 
-  constructor(provider: ethers.Provider, signer?: ethers.Signer, address: string = '0xfAB709a38114bEDE7c5939D4a9334376aBFF058d') {
+  constructor(provider: ethers.Provider, address: string, signer?: ethers.Signer) {
     const signerOrProvider = signer ?? provider;
     this.contract = new ethers.Contract(address, PredictionFactoryAbi, signerOrProvider);
+  }
+
+  // Static method to get factory address based on coin type
+  static getFactoryAddress(coin: 'PSG' | 'BAR'): string {
+    const factoryAddresses = {
+      'PSG': '0xfAB709a38114bEDE7c5939D4a9334376aBFF058d',
+      'BAR': '0xfAB709a38114bEDE7c5939D4a9334376aBFF058d' // Same factory for now, but could be different
+    };
+    return factoryAddresses[coin] || factoryAddresses['PSG'];
+  }
+
+  // Factory method to create PredictionFactory instance for specific coin
+  static createForCoin(
+    provider: ethers.Provider,
+    coin: 'PSG' | 'BAR',
+    signer?: ethers.Signer
+  ): PredictionFactory {
+    const address = this.getFactoryAddress(coin);
+    return new PredictionFactory(provider, address, signer);
   }
 
   async getAllMarkets(): Promise<string[]> {

@@ -41,7 +41,8 @@ const FAN_TOKEN_ABI = [
 ];
 
 // Contract addresses
-const FAN_TOKEN_ADDRESS = '0xEAF931e3F317BF79E3E8FCEea492Efa013087998';
+const PSG_FAN_TOKEN_ADDRESS = '0xEAF931e3F317BF79E3E8FCEea492Efa013087998';
+const BAR_FAN_TOKEN_ADDRESS = '0xdFAc77dB48d7bEDe8e40d059A44ffcddf84A99A3';
 
 const { innerWidth: screenWidth, innerHeight: screenHeight } = typeof window !== 'undefined' ? window : { innerWidth: 0, innerHeight: 0 };
 
@@ -448,10 +449,9 @@ const SwipeCard = ({
           </div>
 
           <div className="market-stats">
-            <div className="stat-item-card">
-              <IoBarChart className="stat-icon" />
-              <span className="stat-text">${item.volume}</span>
-            </div>
+            <div className="category-badge">
+            <span className="stat-text">{item.originalData?.coin || 'PSG'}</span>
+              </div>
           </div>
 
           <div className="bottom-actions">
@@ -514,7 +514,7 @@ export default function App() {
     markets,
     loading: marketsLoading,
     error: marketsError,
-    userBalance,
+    userBalances,
     fetchMarkets,
     fetchUserBalance,
     placeBet: placeBetFromHook,
@@ -651,9 +651,13 @@ export default function App() {
 
   // Shared bet placement function to prevent duplicate code
   const placeBetOnMarket = async (item: any, voteYes: boolean) => {
+    console.log('=== STARTING BET PLACEMENT ===');
     console.log(`Placing bet: ${voteYes ? 'YES' : 'NO'} on item:`, item);
     console.log('Current betAmount:', betAmount);
     console.log('Connected wallet:', connectedWallet);
+    console.log('Item coin:', item.originalData?.coin);
+    console.log('Item market address:', item.originalData?.market_address);
+    console.log('=== END INITIAL LOGS ===');
     
     // Prevent duplicate transactions
     if (isPlacingBet) {
@@ -679,6 +683,8 @@ export default function App() {
     }
     
     console.log('Market address for question:', marketAddress);
+    console.log('Using market address from getMarketAddressForQuestion:', marketAddress);
+    console.log('Item original data market address:', item.originalData?.market_address);
     
     setIsPlacingBet(true);
     
@@ -694,33 +700,72 @@ export default function App() {
         throw new Error('No public client available');
       }
       
+      console.log('=== CONTRACT CREATION ===');
+      console.log('Public client:', publicClient);
+      
       // Use window.ethereum directly for provider
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
+      console.log('Provider created:', provider);
+      console.log('Signer created:', signer);
+      console.log('Signer address:', await signer.getAddress());
       
       // Create contract instances
+      console.log('Creating market contract with address:', marketAddress);
+      console.log('Using ABI:', PREDICTION_MARKET_ABI);
       const market = new ethers.Contract(marketAddress, PREDICTION_MARKET_ABI, signer);
-      const fanToken = new ethers.Contract(FAN_TOKEN_ADDRESS, FAN_TOKEN_ABI, signer);
+      console.log('Market contract created:', market);
+      console.log('Market contract target:', market.target);
+      console.log('Market contract interface:', market.interface);
+      
+      // Determine which fan token to use based on the question
+      const fanTokenAddress = item.originalData?.coin === 'BAR' ? BAR_FAN_TOKEN_ADDRESS : PSG_FAN_TOKEN_ADDRESS;
+      console.log('Using fan token address:', fanTokenAddress);
+      console.log('For coin:', item.originalData?.coin);
+      console.log('BAR_FAN_TOKEN_ADDRESS:', BAR_FAN_TOKEN_ADDRESS);
+      console.log('PSG_FAN_TOKEN_ADDRESS:', PSG_FAN_TOKEN_ADDRESS);
+      
+      const fanToken = new ethers.Contract(fanTokenAddress, FAN_TOKEN_ABI, signer);
+      console.log('Fan token contract created:', fanToken);
+      console.log('Fan token contract target:', fanToken.target);
+      console.log('=== END CONTRACT CREATION ===');
       
       // Check if contract is initialized
-      console.log('Checking contract initialization...');
+      console.log('=== CONTRACT INITIALIZATION CHECK ===');
+      console.log('Checking contract initialization for address:', marketAddress);
+      console.log('Coin:', item.originalData?.coin);
+      
       try {
+        console.log('Calling market.initialized()...');
         const initialized = await market.initialized();
-        console.log('Contract initialized:', initialized);
+        console.log('Contract initialized result:', initialized);
         
         if (!initialized) {
+          console.error('Contract is not initialized!');
           throw new Error('Contract is not initialized');
         }
         
+        console.log('Calling market.creator()...');
         const creator = await market.creator();
         console.log('Contract creator:', creator);
         
+        console.log('Calling market.token()...');
         const tokenAddress = await market.token();
         console.log('Contract token address:', tokenAddress);
+        console.log('Expected fan token address:', fanTokenAddress);
+        console.log('Token addresses match:', tokenAddress.toLowerCase() === fanTokenAddress.toLowerCase());
         
         console.log('Contract is properly initialized');
+        console.log('=== END INITIALIZATION CHECK ===');
       } catch (initError) {
+        console.error('=== CONTRACT INITIALIZATION ERROR ===');
         console.error('Contract initialization check failed:', initError);
+        console.error('Error message:', initError.message);
+        console.error('Error code:', initError.code);
+        console.error('Error data:', initError.data);
+        console.error('Market address:', marketAddress);
+        console.error('Coin:', item.originalData?.coin);
+        console.error('=== END INITIALIZATION ERROR ===');
         throw new Error('Contract initialization check failed: ' + initError.message);
       }
       
@@ -734,7 +779,8 @@ export default function App() {
       console.log('User balance:', userBalance.toString());
       
       if (userBalance < amountInWei) {
-        throw new Error(`Insufficient balance. You have ${ethers.formatUnits(userBalance, 18)} PSG, but trying to bet ${betAmount} PSG`);
+        const tokenName = item.originalData?.coin === 'BAR' ? 'BAR' : 'PSG';
+        throw new Error(`Insufficient balance. You have ${ethers.formatUnits(userBalance, 18)} ${tokenName}, but trying to bet ${betAmount} ${tokenName}`);
       }
       
       // Check allowance
@@ -796,20 +842,83 @@ export default function App() {
       console.log('placeBet function:', placeBetFunction);
       console.log('placeBet function signature:', placeBetFunction?.format());
       
+
+      
       try {
-        const betTx = await market.placeBet(voteYes, amountInWei);
+        console.log('=== TRANSACTION EXECUTION ===');
+        console.log('Coin:', item.originalData?.coin);
+        console.log('Market address:', marketAddress);
+        console.log('Vote yes:', voteYes);
+        console.log('Amount in wei:', amountInWei.toString());
+        
+        // For Barcelona contracts, send transaction directly to avoid contract method issues
+        if (item.originalData?.coin === 'BAR') {
+          console.log('=== BARCELONA CONTRACT APPROACH ===');
+          console.log('Using direct transaction approach for Barcelona');
+          
+          // Encode the function call manually
+          const encodedData = market.interface.encodeFunctionData('placeBet', [voteYes, amountInWei]);
+          console.log('Encoded data for direct transaction:', encodedData);
+          console.log('Function signature: placeBet(bool,uint256)');
+          console.log('Parameters:', [voteYes, amountInWei]);
+          
+          // Send transaction directly
+          const tx = {
+            to: marketAddress,
+            data: encodedData,
+            gasLimit: 500000
+          };
+          
+          console.log('Direct transaction object:', tx);
+          console.log('Signer address:', await signer.getAddress());
+          console.log('Signer provider:', signer.provider);
+          
+          const betTx = await signer.sendTransaction(tx);
+          console.log('Direct transaction sent:', betTx.hash);
+          console.log('Transaction object:', betTx);
+          
+          const receipt = await betTx.wait();
+          console.log('Direct transaction receipt:', receipt);
+          console.log('Transaction status:', receipt.status);
+          console.log('Transaction logs:', receipt.logs);
+          console.log('Gas used:', receipt.gasUsed.toString());
+          
+          if (receipt.status === 0) {
+            console.error('Direct transaction failed - status 0');
+            console.error('Receipt details:', receipt);
+            throw new Error('Direct transaction failed on chain - status 0');
+          }
+          
+          console.log('Barcelona bet confirmed successfully!');
+          alert('Barcelona bet placed successfully! Transaction: ' + betTx.hash);
+          nextCard();
+          return;
+        }
+        
+        // For PSG contracts, use normal contract method
+        console.log('=== PSG CONTRACT APPROACH ===');
+        console.log('Using normal contract method for PSG');
+        
+        const gasOptions = { gasLimit: 500000 };
+        console.log('Gas options:', gasOptions);
+        
+        const betTx = await market.placeBet(voteYes, amountInWei, gasOptions);
         console.log('Bet transaction sent:', betTx.hash);
         console.log('Transaction object:', betTx);
         
         const receipt = await betTx.wait();
         console.log('Transaction receipt:', receipt);
+        console.log('Transaction status:', receipt.status);
+        console.log('Transaction logs:', receipt.logs);
+        console.log('Gas used:', receipt.gasUsed.toString());
         
         if (receipt.status === 0) {
           console.error('Transaction failed on chain. Receipt:', receipt);
           throw new Error('Transaction failed on chain - status 0');
         }
         
-        console.log('Bet confirmed successfully!');
+        console.log('PSG bet confirmed successfully!');
+        console.log('Transaction logs:', receipt.logs);
         console.log('Transaction logs:', receipt.logs);
         
         // Refresh markets after successful bet
@@ -822,20 +931,36 @@ export default function App() {
         // Only move to next card after successful bet
         nextCard();
       } catch (txError) {
-        console.error('Transaction error details:', {
-          error: txError,
-          message: txError.message,
-          code: txError.code,
-          data: txError.data,
-          transaction: txError.transaction,
-          receipt: txError.receipt
-        });
+        console.error('=== TRANSACTION ERROR DETAILS ===');
+        console.error('Error object:', txError);
+        console.error('Error message:', txError.message);
+        console.error('Error code:', txError.code);
+        console.error('Error data:', txError.data);
+        console.error('Error transaction:', txError.transaction);
+        console.error('Error receipt:', txError.receipt);
+        console.error('Error reason:', txError.reason);
+        console.error('Error invocation:', txError.invocation);
+        console.error('Error revert:', txError.revert);
         
         // Check if it's a contract revert
         if (txError.data) {
           console.error('Contract revert data:', txError.data);
         }
         
+        // Try to decode revert reason if available
+        if (txError.reason) {
+          console.error('Revert reason:', txError.reason);
+        }
+        
+        // Log the exact function call that failed
+        console.error('Failed function call details:');
+        console.error('- Function: placeBet');
+        console.error('- Parameters:', [voteYes, amountInWei]);
+        console.error('- Market address:', marketAddress);
+        console.error('- Coin:', item.originalData?.coin);
+        console.error('- Approach:', item.originalData?.coin === 'BAR' ? 'Direct transaction' : 'Contract method');
+        
+        console.error('=== END TRANSACTION ERROR ===');
         throw txError;
       }
       
@@ -1080,7 +1205,7 @@ export default function App() {
           onClose={() => setShowMarkets(false)}
           markets={markets}
           userAddress={connectedWallet || undefined}
-          userBalance={userBalance || undefined}
+          userBalance={userBalances?.PSG || undefined}
           onPlaceBet={placeBetFromHook}
           onApprove={approveMarket}
           checkApproval={checkApproval}

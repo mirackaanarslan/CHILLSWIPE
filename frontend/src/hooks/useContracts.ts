@@ -10,82 +10,114 @@ export interface MarketInfo {
 }
 
 export const useContracts = (provider?: ethers.Provider, signer?: ethers.Signer) => {
-  const [factory, setFactory] = useState<PredictionFactory | null>(null);
-  const [fanToken, setFanToken] = useState<FanToken | null>(null);
+  const [factories, setFactories] = useState<{ PSG: PredictionFactory | null; BAR: PredictionFactory | null }>({ PSG: null, BAR: null });
+  const [fanTokens, setFanTokens] = useState<{ PSG: FanToken | null; BAR: FanToken | null }>({ PSG: null, BAR: null });
   const [markets, setMarkets] = useState<MarketInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [userBalance, setUserBalance] = useState<bigint | null>(null);
+  const [userBalances, setUserBalances] = useState<{ PSG: bigint | null; BAR: bigint | null }>({ PSG: null, BAR: null });
 
   // Initialize contracts
   useEffect(() => {
     if (provider) {
-      const factoryInstance = new PredictionFactory(provider, signer);
-      const tokenInstance = new FanToken(provider, signer);
-      setFactory(factoryInstance);
-      setFanToken(tokenInstance);
+      const psgFactoryInstance = PredictionFactory.createForCoin(provider, 'PSG', signer);
+      const barFactoryInstance = PredictionFactory.createForCoin(provider, 'BAR', signer);
+      const psgTokenInstance = FanToken.createForCoin(provider, 'PSG', signer);
+      const barTokenInstance = FanToken.createForCoin(provider, 'BAR', signer);
+      
+      setFactories({ PSG: psgFactoryInstance, BAR: barFactoryInstance });
+      setFanTokens({ PSG: psgTokenInstance, BAR: barTokenInstance });
     }
   }, [provider, signer]);
 
-  // Fetch all markets
+  // Fetch all markets from both factories
   const fetchMarkets = useCallback(async (userAddress?: string) => {
-    if (!factory) return;
+    if (!factories.PSG && !factories.BAR) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const marketAddresses = await factory.getAllMarkets();
-      const marketPromises = marketAddresses.map(async (address) => {
-        const market = new PredictionMarket(address, provider!, signer);
-        const data = await market.getMarketData(userAddress);
-        return { address, data };
-      });
+      const allMarketInfos: MarketInfo[] = [];
 
-      const marketInfos = await Promise.all(marketPromises);
-      setMarkets(marketInfos);
+      // Fetch PSG markets
+      if (factories.PSG) {
+        try {
+          const psgMarketAddresses = await factories.PSG.getAllMarkets();
+          const psgMarketPromises = psgMarketAddresses.map(async (address) => {
+            const market = new PredictionMarket(address, provider!, signer);
+            const data = await market.getMarketData(userAddress);
+            return { address, data };
+          });
+          const psgMarketInfos = await Promise.all(psgMarketPromises);
+          allMarketInfos.push(...psgMarketInfos);
+        } catch (err) {
+          console.error('Error fetching PSG markets:', err);
+        }
+      }
+
+      // Fetch BAR markets
+      if (factories.BAR) {
+        try {
+          const barMarketAddresses = await factories.BAR.getAllMarkets();
+          const barMarketPromises = barMarketAddresses.map(async (address) => {
+            const market = new PredictionMarket(address, provider!, signer);
+            const data = await market.getMarketData(userAddress);
+            return { address, data };
+          });
+          const barMarketInfos = await Promise.all(barMarketPromises);
+          allMarketInfos.push(...barMarketInfos);
+        } catch (err) {
+          console.error('Error fetching BAR markets:', err);
+        }
+      }
+
+      setMarkets(allMarketInfos);
     } catch (err) {
       console.error('Error fetching markets:', err);
       setError('Failed to fetch markets');
     } finally {
       setLoading(false);
     }
-  }, [factory, provider, signer]);
+  }, [factories, provider, signer]);
 
-  // Fetch user balance
-  const fetchUserBalance = useCallback(async (userAddress: string) => {
-    if (!fanToken) return;
+  // Fetch user balance for specific coin
+  const fetchUserBalance = useCallback(async (userAddress: string, coin: 'PSG' | 'BAR' = 'PSG') => {
+    const token = fanTokens[coin];
+    if (!token) return;
 
     try {
-      const balance = await fanToken.balanceOf(userAddress);
-      setUserBalance(balance);
+      const balance = await token.balanceOf(userAddress);
+      setUserBalances(prev => ({ ...prev, [coin]: balance }));
     } catch (err) {
-      console.error('Error fetching user balance:', err);
-      setError('Failed to fetch user balance');
+      console.error(`Error fetching ${coin} user balance:`, err);
+      setError(`Failed to fetch ${coin} user balance`);
     }
-  }, [fanToken]);
+  }, [fanTokens]);
 
   // Place a bet
   const placeBet = useCallback(async (
     marketAddress: string,
     voteYes: boolean,
     amount: string,
-    userAddress: string
+    userAddress: string,
+    coin: 'PSG' | 'BAR' = 'PSG'
   ) => {
-    if (!fanToken || !provider || !signer) {
+    const token = fanTokens[coin];
+    if (!token || !provider || !signer) {
       throw new Error('Contracts not initialized');
     }
 
     try {
       const market = new PredictionMarket(marketAddress, provider, signer);
-      const amountBN = fanToken.parseAmount(amount);
+      const amountBN = token.parseAmount(amount);
 
       // Check if approval is needed
-      const needsApproval = await fanToken.needsApproval(userAddress, marketAddress, amountBN);
+      const needsApproval = await token.needsApproval(userAddress, marketAddress, amountBN);
       
       if (needsApproval) {
         // Approve first
-        await fanToken.approve(marketAddress, amountBN);
+        await token.approve(marketAddress, amountBN);
       }
 
       // Place the bet
@@ -96,44 +128,48 @@ export const useContracts = (provider?: ethers.Provider, signer?: ethers.Signer)
       console.error('Error placing bet:', err);
       throw err;
     }
-  }, [fanToken, provider, signer]);
+  }, [fanTokens, provider, signer]);
 
   // Check if user has approved a market
   const checkApproval = useCallback(async (
     userAddress: string,
     marketAddress: string,
-    amount: string
+    amount: string,
+    coin: 'PSG' | 'BAR' = 'PSG'
   ): Promise<boolean> => {
-    if (!fanToken) return false;
+    const token = fanTokens[coin];
+    if (!token) return false;
 
     try {
-      const amountBN = fanToken.parseAmount(amount);
-      const needsApproval = await fanToken.needsApproval(userAddress, marketAddress, amountBN);
+      const amountBN = token.parseAmount(amount);
+      const needsApproval = await token.needsApproval(userAddress, marketAddress, amountBN);
       return !needsApproval;
     } catch (err) {
       console.error('Error checking approval:', err);
       return false;
     }
-  }, [fanToken]);
+  }, [fanTokens]);
 
   // Approve market to spend tokens
   const approveMarket = useCallback(async (
     marketAddress: string,
-    amount: string
+    amount: string,
+    coin: 'PSG' | 'BAR' = 'PSG'
   ) => {
-    if (!fanToken || !signer) {
+    const token = fanTokens[coin];
+    if (!token || !signer) {
       throw new Error('Contracts not initialized');
     }
 
     try {
-      const amountBN = fanToken.parseAmount(amount);
-      const receipt = await fanToken.approve(marketAddress, amountBN);
+      const amountBN = token.parseAmount(amount);
+      const receipt = await token.approve(marketAddress, amountBN);
       return receipt;
     } catch (err) {
       console.error('Error approving market:', err);
       throw err;
     }
-  }, [fanToken, signer]);
+  }, [fanTokens, signer]);
 
   // Resolve market (only creator)
   const resolveMarket = useCallback(async (
@@ -156,12 +192,12 @@ export const useContracts = (provider?: ethers.Provider, signer?: ethers.Signer)
   }, [provider, signer]);
 
   return {
-    factory,
-    fanToken,
+    factories,
+    fanTokens,
     markets,
     loading,
     error,
-    userBalance,
+    userBalances,
     fetchMarkets,
     fetchUserBalance,
     placeBet,
