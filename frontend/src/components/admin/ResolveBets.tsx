@@ -18,13 +18,28 @@ interface MarketInfo extends Market {
   creator: string;
 }
 
+type FilterType = 'all' | 'active' | 'resolved';
+
 export const ResolveBets: React.FC = () => {
   const [markets, setMarkets] = useState<MarketInfo[]>([]);
+  const [allMarkets, setAllMarkets] = useState<MarketInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [resolving, setResolving] = useState<string | null>(null);
+  const [filter, setFilter] = useState<FilterType>('all');
   const { address } = useAccount();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
+
+  // Filter markets based on current filter
+  useEffect(() => {
+    if (filter === 'all') {
+      setMarkets(allMarkets);
+    } else if (filter === 'active') {
+      setMarkets(allMarkets.filter(market => !market.resolved));
+    } else if (filter === 'resolved') {
+      setMarkets(allMarkets.filter(market => market.resolved));
+    }
+  }, [filter, allMarkets]);
 
   const loadMarkets = async () => {
     console.log('=== LOAD MARKETS DEBUG ===');
@@ -116,7 +131,7 @@ export const ResolveBets: React.FC = () => {
       const validMarkets = marketData.filter(market => market !== null) as MarketInfo[];
       console.log('✅ Valid markets loaded:', validMarkets.length);
       console.log('✅ Valid markets data:', validMarkets);
-      setMarkets(validMarkets);
+      setAllMarkets(validMarkets); // Store all valid markets
     } catch (error) {
       console.error('❌ Failed to load markets:', error);
       toast.error('Failed to load prediction markets');
@@ -306,16 +321,31 @@ export const ResolveBets: React.FC = () => {
 
   return (
     <div className="resolve-bets">
+      <div className="filter-section">
+        <div className="filter-container">
+          <label htmlFor="market-filter" className="filter-label">Filter Markets:</label>
+          <select
+            id="market-filter"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as FilterType)}
+            className="filter-select"
+          >
+            <option value="all">All Markets ({allMarkets.length})</option>
+            <option value="active">Active Markets ({allMarkets.filter(m => !m.resolved).length})</option>
+            <option value="resolved">Resolved Markets ({allMarkets.filter(m => m.resolved).length})</option>
+          </select>
+        </div>
+      </div>
+      
       <div className="markets-grid">
         {markets.map((market) => (
           <div key={market.id} className="market-card">
             <div className="market-header">
               <div className="market-coin">
-                <span className="coin-icon">{market.token_symbol === 'PSG' ? '🔴' : '🔵'}</span>
                 <span className="coin-name">{market.token_symbol}</span>
               </div>
               <div className={`market-status ${market.resolved ? 'resolved' : 'active'}`}>
-                {market.resolved ? '✅ Resolved' : '⏳ Active'}
+                {market.resolved ? 'Resolved' : 'Active'}
               </div>
             </div>
 

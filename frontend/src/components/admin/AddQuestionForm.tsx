@@ -241,7 +241,6 @@ export const AddQuestionForm: React.FC<AddQuestionFormProps> = ({ onQuestionAdde
             onClick={() => handleInputChange('coin', 'PSG')}
             className={`coin-option ${formData.coin === 'PSG' ? 'active' : ''}`}
           >
-            <span className="coin-icon">🔴</span>
             <span className="coin-name">PSG</span>
           </button>
           <button
@@ -249,7 +248,6 @@ export const AddQuestionForm: React.FC<AddQuestionFormProps> = ({ onQuestionAdde
             onClick={() => handleInputChange('coin', 'BAR')}
             className={`coin-option ${formData.coin === 'BAR' ? 'active' : ''}`}
           >
-            <span className="coin-icon">🔵</span>
             <span className="coin-name">Barcelona</span>
           </button>
         </div>

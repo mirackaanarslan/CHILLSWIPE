@@ -3960,3 +3960,325 @@ body {
     margin-left: 8px;
   }
 }
+
+/* ===== ADMIN PANEL CSS IMPROVEMENTS ===== */
+
+/* Coin name styling - make PSG and BAR text black */
+.coin-name {
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+
+/* End time section styling */
+.end-time-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.time-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.time-input-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  text-align: center;
+}
+
+.time-input {
+  padding: 8px 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.time-input:focus {
+  outline: none;
+  border-color: #004D98;
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 0 0 0 3px rgba(0, 77, 152, 0.1);
+}
+
+.end-time-display {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(0, 77, 152, 0.1);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.end-time-display small {
+  color: #374151;
+  font-weight: 600;
+}
+
+/* Question List Improvements */
+.question-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(20px);
+}
+
+.question-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  border-color: rgba(237, 28, 36, 0.3);
+}
+
+.question-title {
+  color: #000000 !important;
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  line-height: 1.4 !important;
+}
+
+/* Market Information Section */
+.market-info-section {
+  margin-top: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(0, 77, 152, 0.05) 0%, rgba(237, 28, 36, 0.05) 100%);
+  border-radius: 12px;
+  border: 1px solid rgba(0, 77, 152, 0.1);
+}
+
+.market-info-title {
+  color: #000000 !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  margin-bottom: 16px !important;
+  text-align: center;
+}
+
+.market-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.market-info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.market-info-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.market-info-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: #000000;
+}
+
+.market-info-value.address {
+  font-family: 'Courier New', monospace;
+  color: #004D98;
+}
+
+.token-badge {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.token-badge.PSG {
+  background: linear-gradient(135deg, rgba(237, 28, 36, 0.1) 0%, rgba(237, 28, 36, 0.2) 100%);
+  color: #000000;
+  border: 1px solid rgba(237, 28, 36, 0.3);
+}
+
+.token-badge.BAR {
+  background: linear-gradient(135deg, rgba(0, 77, 152, 0.1) 0%, rgba(0, 77, 152, 0.2) 100%);
+  color: #000000;
+  border: 1px solid rgba(0, 77, 152, 0.3);
+}
+
+.market-status-badge {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.market-status-badge.open {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.2) 100%);
+  color: #000000;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.market-status-badge.resolved {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.2) 100%);
+  color: #000000;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Resolve Bets Improvements */
+.resolve-bets {
+  color: #000000 !important;
+}
+
+.market-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(20px);
+}
+
+.market-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  border-color: rgba(237, 28, 36, 0.3);
+}
+
+.market-question {
+  color: #000000 !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  margin-bottom: 16px !important;
+}
+
+.market-coin .coin-name {
+  color: #000000 !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+}
+
+.market-status {
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+
+.stat-label {
+  color: #374151 !important;
+  font-weight: 600 !important;
+}
+
+.stat-value {
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+
+.market-address,
+.question-title,
+.creator-address {
+  color: #004D98 !important;
+  font-weight: 600 !important;
+  font-family: 'Courier New', monospace;
+}
+
+/* Mobile responsive improvements */
+@media (max-width: 768px) {
+  .end-time-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  
+  .market-info-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .market-info-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .question-title {
+    font-size: 16px !important;
+  }
+  
+  .market-question {
+    font-size: 16px !important;
+  }
+}
+
+/* Filter Section Styles */
+.filter-section {
+  margin-bottom: 24px;
+}
+
+.filter-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(20px);
+}
+
+.filter-label {
+  font-weight: 600;
+  color: #000000;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.filter-select {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  color: #000000;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 200px;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #ED1C24;
+  box-shadow: 0 0 0 3px rgba(237, 28, 36, 0.2);
+}
+
+.filter-select:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: rgba(237, 28, 36, 0.3);
+}
+
+.filter-select option {
+  background: #ffffff;
+  color: #000000;
+  padding: 8px;
+}
+
+@media (max-width: 768px) {
+  .filter-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .filter-select {
+    min-width: auto;
+    width: 100%;
+  }
+}

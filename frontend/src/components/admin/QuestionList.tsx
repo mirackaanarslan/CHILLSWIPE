@@ -295,8 +295,8 @@ export const QuestionList: React.FC<QuestionListProps> = ({
                     onChange={(e) => setEditForm(prev => ({ ...prev, coin: e.target.value as 'PSG' | 'BAR' }))}
                     className="form-input"
                   >
-                    <option value="PSG">🔴 PSG</option>
-                    <option value="BAR">🔵 Barcelona</option>
+                    <option value="PSG">PSG</option>
+                    <option value="BAR">Barcelona</option>
                   </select>
                 </div>
                 <div className="form-group">
@@ -353,9 +353,6 @@ export const QuestionList: React.FC<QuestionListProps> = ({
                       {question.status}
                     </span>
                     <span className="coin-badge">
-                      <span className="coin-icon">
-                        {question.coin === 'PSG' ? '🔴' : '🔵'}
-                      </span>
                       <span className="coin-name">
                         {question.coin}
                       </span>
@@ -420,7 +417,7 @@ export const QuestionList: React.FC<QuestionListProps> = ({
                         <span className="market-info-label">Token Symbol:</span>
                         <span className="market-info-value">
                           <span className={`token-badge ${question.market.token_symbol}`}>
-                            {question.market.token_symbol === 'PSG' ? '🔴' : '🔵'} {question.market.token_symbol}
+                            {question.market.token_symbol}
                           </span>
                         </span>
                       </div>
