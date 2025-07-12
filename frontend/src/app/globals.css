@@ -4282,3 +4282,358 @@ body {
     width: 100%;
   }
 }
+
+/* Bet History Styles */
+.bet-status-breakdown {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.status-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: white;
+}
+
+.status-icon.active {
+  background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+}
+
+.status-icon.resolved {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+}
+
+.status-icon.claimed {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+}
+
+.status-info {
+  flex: 1;
+}
+
+.status-count {
+  font-size: 18px;
+  font-weight: 700;
+  color: #000000;
+  margin: 0;
+}
+
+.status-label {
+  font-size: 12px;
+  color: #6B7280;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.bet-history-section {
+  margin-bottom: 24px;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.history-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #000000;
+  margin: 0;
+}
+
+.history-filter-select {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  color: #000000;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.history-filter-select:focus {
+  outline: none;
+  border-color: #ED1C24;
+  box-shadow: 0 0 0 2px rgba(237, 28, 36, 0.2);
+}
+
+.history-filter-select:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: rgba(237, 28, 36, 0.3);
+}
+
+.bet-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bet-history-item {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.bet-history-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border-color: rgba(237, 28, 36, 0.3);
+}
+
+.bet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.bet-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bet-status-text {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.bet-amount {
+  font-size: 14px;
+  font-weight: 700;
+  color: #000000;
+}
+
+.bet-content {
+  margin-bottom: 12px;
+}
+
+.bet-question {
+  font-size: 14px;
+  font-weight: 600;
+  color: #000000;
+  margin: 0 0 8px 0;
+  line-height: 1.4;
+}
+
+.bet-details {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.bet-type {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.bet-type.bet-yes {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.2) 100%);
+  color: #000000;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.bet-type.bet-no {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.2) 100%);
+  color: #000000;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.bet-address {
+  font-size: 11px;
+  color: #6B7280;
+  font-family: 'Courier New', monospace;
+}
+
+.bet-outcome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.outcome-label {
+  font-size: 12px;
+  color: #6B7280;
+  font-weight: 500;
+}
+
+.outcome-value {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.outcome-value.correct {
+  color: #10B981;
+}
+
+.outcome-value.incorrect {
+  color: #EF4444;
+}
+
+.claim-button {
+  background: linear-gradient(135deg, #ED1C24 0%, #B91C1C 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.claim-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(237, 28, 36, 0.3);
+}
+
+.claim-button:disabled {
+  background: #9CA3AF;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.bet-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.bet-date {
+  font-size: 11px;
+  color: #9CA3AF;
+}
+
+.empty-history {
+  text-align: center;
+  padding: 24px;
+  color: #6B7280;
+  font-style: italic;
+}
+
+.stat-value.total-amount {
+  color: #ED1C24;
+}
+
+@media (max-width: 768px) {
+  .bet-status-breakdown {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .history-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .bet-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .bet-details {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  
+  .bet-history-item {
+    padding: 12px;
+  }
+}
+
+/* Wallet Address Section Styles */
+.wallet-address-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.wallet-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #ED1C24 0%, #B91C1C 100%);
+  border-radius: 50%;
+  color: white;
+  flex-shrink: 0;
+}
+
+.wallet-info {
+  flex: 1;
+}
+
+.wallet-label {
+  font-size: 12px;
+  color: #6B7280;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 4px 0;
+}
+
+.wallet-address {
+  font-size: 16px;
+  font-weight: 700;
+  color: #000000;
+  font-family: 'Courier New', monospace;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+@media (max-width: 768px) {
+  .wallet-address-section {
+    flex-direction: column;
+    text-align: center;
+    gap: 8px;
+  }
+  
+  .wallet-address {
+    font-size: 14px;
+  }
+}

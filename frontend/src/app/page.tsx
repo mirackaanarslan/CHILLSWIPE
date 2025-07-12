@@ -165,7 +165,7 @@ const AmountSelector = ({ betAmount, setBetAmount }: { betAmount: number; setBet
       <div className="amount-display-section">
         <div className="amount-display">
           <span className="amount-label">Bet Amount</span>
-          <span className="amount-value">${betAmount.toFixed(2)}</span>
+          <span className="amount-value">{betAmount.toFixed(2)}</span>
         </div>
       </div>
       
@@ -177,7 +177,7 @@ const AmountSelector = ({ betAmount, setBetAmount }: { betAmount: number; setBet
               className={`preset-btn ${betAmount === amount ? 'active' : ''}`}
               onClick={() => handlePresetClick(amount)}
             >
-              ${amount}
+              {amount}
             </button>
           ))}
           <button
@@ -217,8 +217,8 @@ const AmountSelector = ({ betAmount, setBetAmount }: { betAmount: number; setBet
             className="slider"
           />
           <div className="slider-labels">
-            <span>${minAmount}</span>
-            <span>${maxAmount}</span>
+            <span>{minAmount}</span>
+            <span>{maxAmount}</span>
           </div>
         </div>
       </div>
@@ -457,7 +457,7 @@ const SwipeCard = ({
           <div className="bottom-actions">
             <div className="bet-display">
               <div className="bet-label">Your Bet</div>
-              <div className="bet-amount-large">${betAmount.toFixed(2)}</div>
+              <div className="bet-amount-large">{betAmount.toFixed(2)}</div>
             </div>
             <button 
               className="pass-button-inline"
