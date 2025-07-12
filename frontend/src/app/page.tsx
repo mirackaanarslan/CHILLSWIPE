@@ -14,6 +14,7 @@ import Leaderboard from '@/components/Leaderboard';
 import { Menu, X } from 'lucide-react';
 import { useContracts } from '@/hooks/useContracts';
 import { MarketCard } from '@/components/MarketCard';
+import AIChatbot from '@/components/AIChatbot';
 
 import { ethers } from 'ethers';
 
@@ -1206,6 +1207,8 @@ export default function App() {
           onClose={() => setShowLeaderboard(false)} 
         />
         
+        {/* AI Chatbot */}
+        <AIChatbot />
 
       </div>
     </div>
