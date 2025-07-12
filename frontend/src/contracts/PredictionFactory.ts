@@ -19,8 +19,8 @@ export class PredictionFactory {
   // Static method to get factory address based on coin type
   static getFactoryAddress(coin: 'PSG' | 'BAR'): string {
     const factoryAddresses = {
-      'PSG': '0xfAB709a38114bEDE7c5939D4a9334376aBFF058d',
-      'BAR': '0xfAB709a38114bEDE7c5939D4a9334376aBFF058d' // Same factory for now, but could be different
+      'PSG': '0xC35dF331c5ee456142CC25F000a1d29297CcfD47',
+      'BAR': '0xC35dF331c5ee456142CC25F000a1d29297CcfD47' // Same factory for now, but could be different
     };
     return factoryAddresses[coin] || factoryAddresses['PSG'];
   }

@@ -41,8 +41,8 @@ const FAN_TOKEN_ABI = [
 ];
 
 // Contract addresses
-const PSG_FAN_TOKEN_ADDRESS = '0xEAF931e3F317BF79E3E8FCEea492Efa013087998';
-const BAR_FAN_TOKEN_ADDRESS = '0xdFAc77dB48d7bEDe8e40d059A44ffcddf84A99A3';
+const PSG_FAN_TOKEN_ADDRESS = '0xcc59fe0fE274F3e6153f3e60fa81cf51f7B67495';
+const BAR_FAN_TOKEN_ADDRESS = '0xCF1d782aE0EF091dDc21Ef179740F5A12bEE9FA9';
 
 const { innerWidth: screenWidth, innerHeight: screenHeight } = typeof window !== 'undefined' ? window : { innerWidth: 0, innerHeight: 0 };
 

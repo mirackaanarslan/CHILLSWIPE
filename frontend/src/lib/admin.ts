@@ -106,8 +106,8 @@ export const getAllQuestions = async (): Promise<Question[]> => {
 export function getMarketAddressForQuestion(id: string, title: string): string | null {
   const marketAddressMap: Record<string, string> = {
     // "Will Navas start?" (Supabase questionId = örnek id, gerçek id'yi sen vereceksin)
-    '2f71b072-e0aa-472c-a771-d9644fe6ce5a': '0x9E77933302AEB5841C07be533512cd6586D0a102',
-    'ea60694c-8f0c-4c9c-a914-92be93496cad': '0x258d2677cc8c1a41c3b3a6d499b205cd48fc1cf2',
+    '9d79ec49-7e15-44a7-aca3-f7303f7f5547': '0xa57bef0f00F665112e2a102Fd3cDad260F09747',
+    'be0e0b37-26db-4b50-aee8-7fed485682b7': '0x88C3c2D6D7A045ED8009435db32eAB6bed75F283',
     
 
     // Yeni sorular buraya eklenebilir

@@ -5,14 +5,18 @@ import { useRouter } from 'next/navigation';
 import { Question } from '@/types/supabase';
 import { AddQuestionForm } from '@/components/admin/AddQuestionForm';
 import { QuestionList } from '@/components/admin/QuestionList';
+import { ResolveBets } from '@/components/admin/ResolveBets';
 import { getAllQuestions } from '@/lib/admin';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useAccount } from 'wagmi';
 
 const AdminPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'add' | 'manage'>('add');
+  const [activeTab, setActiveTab] = useState<'add' | 'manage' | 'resolve'>('add');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const { isAuthenticated, loading: authLoading, logout } = useAdminAuth();
+  const { address } = useAccount();
   const router = useRouter();
 
   const loadQuestions = async () => {
@@ -84,6 +88,9 @@ const AdminPage: React.FC = () => {
               <span className="stat-label">Questions</span>
               <span className="stat-value">{questions.length}</span>
             </div>
+            <div className="wallet-section">
+              <ConnectButton />
+            </div>
             <button
               onClick={logout}
               className="logout-button"
@@ -111,6 +118,13 @@ const AdminPage: React.FC = () => {
             <span className="tab-icon">📋</span>
             <span className="tab-text">Manage Questions</span>
           </button>
+          <button
+            onClick={() => setActiveTab('resolve')}
+            className={`tab-button ${activeTab === 'resolve' ? 'active' : ''}`}
+          >
+            <span className="tab-icon">🏁</span>
+            <span className="tab-text">Resolve Bets</span>
+          </button>
         </div>
 
         {/* Tab Content */}
@@ -136,6 +150,16 @@ const AdminPage: React.FC = () => {
                 loading={loading}
                 onQuestionUpdated={loadQuestions}
               />
+            </div>
+          )}
+
+          {activeTab === 'resolve' && (
+            <div className="content-card">
+              <div className="card-header">
+                <h2 className="card-title">Resolve Bets</h2>
+                <p className="card-subtitle">Resolve prediction markets and determine outcomes</p>
+              </div>
+              <ResolveBets />
             </div>
           )}
         </div>

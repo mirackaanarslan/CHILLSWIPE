@@ -1720,6 +1720,11 @@ body {
   gap: 20px;
 }
 
+.wallet-section {
+  display: flex;
+  align-items: center;
+}
+
 .stat-item {
   display: flex;
   flex-direction: column;
@@ -3629,9 +3634,301 @@ body {
   background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
 }
 
-.logout-button:active {
-  transform: translateY(0);
-}
+  .logout-button:active {
+    transform: translateY(0);
+  }
+
+  /* ===== RESOLVE BETS STYLES ===== */
+  .resolve-bets {
+    padding: 20px 0;
+  }
+
+  .markets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 24px;
+    margin-top: 20px;
+  }
+
+  .market-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 24px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .market-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.08) 0%,
+      rgba(255, 255, 255, 0.04) 50%,
+      rgba(255, 255, 255, 0.06) 100%);
+    border-radius: inherit;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .market-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .market-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .market-coin {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .coin-icon {
+    font-size: 24px;
+  }
+
+  .coin-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .market-status {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .market-status.active {
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  }
+
+  .market-status.resolved {
+    background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+  }
+
+  .market-content {
+    margin-bottom: 20px;
+  }
+
+  .market-question {
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+
+  .market-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .stat-row:last-child {
+    border-bottom: none;
+  }
+
+  .stat-label {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+  }
+
+  .stat-value {
+    font-size: 14px;
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .market-actions {
+    margin-top: 20px;
+  }
+
+  .resolve-buttons {
+    display: flex;
+    gap: 12px;
+  }
+
+  .resolve-btn {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .resolve-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+  }
+
+  .resolve-yes {
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  }
+
+  .resolve-yes:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+  }
+
+  .resolve-no {
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  }
+
+  .resolve-no:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+  }
+
+  .creator-address {
+    font-family: monospace;
+    font-size: 12px;
+    color: #10B981;
+  }
+
+  .not-creator-message {
+    text-align: center;
+    padding: 20px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 12px;
+    color: #EF4444;
+    font-weight: 500;
+  }
+
+  .market-not-ended {
+    text-align: center;
+    padding: 20px;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 12px;
+    color: #f59e0b;
+    font-weight: 500;
+  }
+
+  .market-not-ended p {
+    margin: 0;
+  }
+
+  .market-not-ended .text-sm {
+    font-size: 12px;
+    margin-top: 4px;
+    opacity: 0.8;
+  }
+
+  .market-time-info {
+    text-align: center;
+    padding: 16px;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 12px;
+    color: #3b82f6;
+    font-weight: 500;
+    margin-bottom: 16px;
+  }
+
+  .market-time-info p {
+    margin: 0;
+  }
+
+  .market-time-info .text-sm {
+    font-size: 12px;
+    margin-top: 4px;
+    opacity: 0.8;
+  }
+
+  .market-ended-info {
+    text-align: center;
+    padding: 16px;
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    border-radius: 12px;
+    color: #22c55e;
+    font-weight: 500;
+    margin-bottom: 16px;
+  }
+
+  .market-ended-info p {
+    margin: 0;
+  }
+
+  .market-ended-info .text-sm {
+    font-size: 12px;
+    margin-top: 4px;
+    opacity: 0.8;
+  }
+
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+  }
+
+  @media (max-width: 768px) {
+    .markets-grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    .market-card {
+      padding: 20px;
+    }
+
+    .market-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .resolve-buttons {
+      flex-direction: column;
+    }
+
+    .resolve-btn {
+      padding: 14px 20px;
+    }
+  }
 
 @media (max-width: 768px) {
   .login-card {

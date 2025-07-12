@@ -22,12 +22,14 @@ const ABI = [
   'function endTime() public view returns (uint256)',
   'function resolved() public view returns (bool)',
   'function outcome() public view returns (uint8)',
+  'function creator() public view returns (address)',
   'function getUserBets(address user) public view returns (tuple(uint8 choice, uint256 amount)[])',
   'function placeBet(bool voteYes, uint256 amount) public',
   'function resolveMarket(bool outcomeIsYes) public',
+  'function claim() public',
   'event BetPlaced(address indexed user, bool voteYes, uint256 amount)',
   'event MarketResolved(bool outcomeIsYes)'
-];
+]
 
 export class PredictionMarket {
   contract: ethers.Contract;

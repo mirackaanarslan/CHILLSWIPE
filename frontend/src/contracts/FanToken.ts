@@ -21,8 +21,8 @@ export class FanToken {
   // Static method to get token address based on coin type
   static getTokenAddress(coin: 'PSG' | 'BAR'): string {
     const tokenAddresses = {
-      'PSG': '0xEAF931e3F317BF79E3E8FCEea492Efa013087998',
-      'BAR': '0xdFAc77dB48d7bEDe8e40d059A44ffcddf84A99A3'
+        'PSG': '0xcc59fe0fE274F3e6153f3e60fa81cf51f7B67495',
+  'BAR': '0xCF1d782aE0EF091dDc21Ef179740F5A12bEE9FA9'
     };
     return tokenAddresses[coin] || tokenAddresses['PSG'];
   }
