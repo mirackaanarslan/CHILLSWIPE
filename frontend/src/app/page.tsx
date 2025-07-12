@@ -41,8 +41,8 @@ const FAN_TOKEN_ABI = [
 ];
 
 // Contract addresses
-const PSG_FAN_TOKEN_ADDRESS = '0xcc59fe0fE274F3e6153f3e60fa81cf51f7B67495';
-const BAR_FAN_TOKEN_ADDRESS = '0xCF1d782aE0EF091dDc21Ef179740F5A12bEE9FA9';
+const PSG_FAN_TOKEN_ADDRESS = '0xd2E815c3870a1fC2ED71D3C3355EAE5FF728F630';
+const BAR_FAN_TOKEN_ADDRESS = '0x21FD1F8067C9a418eD8447f633f5C9b2E01EbAe0';
 
 const { innerWidth: screenWidth, innerHeight: screenHeight } = typeof window !== 'undefined' ? window : { innerWidth: 0, innerHeight: 0 };
 
@@ -674,7 +674,7 @@ export default function App() {
     }
     
     // Check if we have a market address for this question
-    const marketAddress = getMarketAddressForQuestion(item.id, item.title);
+    const marketAddress = await getMarketAddressForQuestion(item.id, item.title);
     if (!marketAddress) {
       console.log('No market address found for question:', item.id, 'title:', item.title);
       alert('This question is not available for betting yet');
@@ -790,39 +790,39 @@ export default function App() {
       if (allowance < amountInWei) {
         console.log('Approval needed, requesting approval...');
         
-        // Check if we're already in the process of approving this market
-        if (approvalStatus[marketAddress]) {
-          console.log('Approval already in progress for this market, waiting...');
-          // Wait a bit and check again
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          const newAllowance = await fanToken.allowance(connectedWallet, marketAddress);
-          if (newAllowance < amountInWei) {
-            throw new Error('Approval is taking too long. Please try again.');
-          }
-        } else {
-          // Set approval status to prevent duplicate approvals
-          setApprovalStatus(prev => ({ ...prev, [marketAddress]: true }));
-          
-          try {
-            const approveTx = await fanToken.approve(marketAddress, amountInWei);
-            console.log('Approval transaction sent:', approveTx.hash);
-            
-            // Wait for approval confirmation
-            const approveReceipt = await approveTx.wait();
-            console.log('Approval confirmed on-chain:', approveReceipt.hash);
-            
-            // Double-check allowance after approval
-            const finalAllowance = await fanToken.allowance(connectedWallet, marketAddress);
-            console.log('Final allowance after approval:', finalAllowance.toString());
-            
-            if (finalAllowance < amountInWei) {
-              throw new Error('Approval was confirmed but allowance is still insufficient');
-            }
-          } finally {
-            // Clear approval status
-            setApprovalStatus(prev => ({ ...prev, [marketAddress]: false }));
-          }
+              // Check if we're already in the process of approving this market
+      if (approvalStatus[marketAddress]) {
+        console.log('Approval already in progress for this market, waiting...');
+        // Wait a bit and check again
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const newAllowance = await fanToken.allowance(connectedWallet, marketAddress);
+        if (newAllowance < amountInWei) {
+          throw new Error('Approval is taking too long. Please try again.');
         }
+      } else {
+        // Set approval status to prevent duplicate approvals
+        setApprovalStatus(prev => ({ ...prev, [marketAddress]: true }));
+        
+        try {
+          const approveTx = await fanToken.approve(marketAddress, amountInWei);
+          console.log('Approval transaction sent:', approveTx.hash);
+          
+          // Wait for approval confirmation
+          const approveReceipt = await approveTx.wait();
+          console.log('Approval confirmed on-chain:', approveReceipt.hash);
+          
+          // Double-check allowance after approval
+          const finalAllowance = await fanToken.allowance(connectedWallet, marketAddress);
+          console.log('Final allowance after approval:', finalAllowance.toString());
+          
+          if (finalAllowance < amountInWei) {
+            throw new Error('Approval was confirmed but allowance is still insufficient');
+          }
+        } finally {
+          // Clear approval status
+          setApprovalStatus(prev => ({ ...prev, [marketAddress]: false }));
+        }
+      }
       }
       
       // Place the bet
@@ -895,30 +895,44 @@ export default function App() {
           return;
         }
         
-        // For PSG contracts, use normal contract method
+        // For PSG contracts, use direct transaction approach (same as Barcelona)
         console.log('=== PSG CONTRACT APPROACH ===');
-        console.log('Using normal contract method for PSG');
+        console.log('Using direct transaction approach for PSG');
         
-        const gasOptions = { gasLimit: 500000 };
-        console.log('Gas options:', gasOptions);
+        // Encode the function call manually
+        const encodedData = market.interface.encodeFunctionData('placeBet', [voteYes, amountInWei]);
+        console.log('Encoded data for direct transaction:', encodedData);
+        console.log('Function signature: placeBet(bool,uint256)');
+        console.log('Parameters:', [voteYes, amountInWei]);
         
-        const betTx = await market.placeBet(voteYes, amountInWei, gasOptions);
-        console.log('Bet transaction sent:', betTx.hash);
+        // Send transaction directly
+        const tx = {
+          to: marketAddress,
+          data: encodedData,
+          gasLimit: 500000
+        };
+        
+        console.log('Direct transaction object:', tx);
+        console.log('Signer address:', await signer.getAddress());
+        console.log('Signer provider:', signer.provider);
+        
+        const betTx = await signer.sendTransaction(tx);
+        console.log('Direct transaction sent:', betTx.hash);
         console.log('Transaction object:', betTx);
         
         const receipt = await betTx.wait();
-        console.log('Transaction receipt:', receipt);
+        console.log('Direct transaction receipt:', receipt);
         console.log('Transaction status:', receipt.status);
         console.log('Transaction logs:', receipt.logs);
         console.log('Gas used:', receipt.gasUsed.toString());
         
         if (receipt.status === 0) {
-          console.error('Transaction failed on chain. Receipt:', receipt);
-          throw new Error('Transaction failed on chain - status 0');
+          console.error('Direct transaction failed - status 0');
+          console.error('Receipt details:', receipt);
+          throw new Error('Direct transaction failed on chain - status 0');
         }
         
         console.log('PSG bet confirmed successfully!');
-        console.log('Transaction logs:', receipt.logs);
         console.log('Transaction logs:', receipt.logs);
         
         // Refresh markets after successful bet

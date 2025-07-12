@@ -3,8 +3,10 @@
 import React, { useState } from 'react';
 import { CreateQuestionData } from '@/types/supabase';
 import { ImageUpload } from './ImageUpload';
-import { addQuestion, uploadQuestionImage } from '@/lib/admin';
+import { addQuestion, uploadQuestionImage, createMarketContract, updateMarketWithContractAddress, getMarketByQuestionId } from '@/lib/admin';
+import { useWalletClient } from 'wagmi';
 import toast from 'react-hot-toast';
+import { ethers } from 'ethers';
 
 interface AddQuestionFormProps {
   onQuestionAdded: () => void;
@@ -48,11 +50,21 @@ export const AddQuestionForm: React.FC<AddQuestionFormProps> = ({ onQuestionAdde
     description: '',
     category: 'match_result',
     image_url: '',
-    coin: 'PSG'
+    coin: 'PSG',
+    end_time: ''
+  });
+  
+  const [endTime, setEndTime] = useState({
+    year: new Date().getFullYear(),
+    month: new Date().getMonth() + 1,
+    day: Math.min(new Date().getDate() + 1, 28), // Use next day, max 28 to avoid month issues
+    hour: 12, // Default to noon
+    minute: 0
   });
   
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const { data: walletClient } = useWalletClient();
 
   const handleInputChange = (field: keyof CreateQuestionData, value: any) => {
     console.log(`Updating ${field} to:`, value);
@@ -60,6 +72,36 @@ export const AddQuestionForm: React.FC<AddQuestionFormProps> = ({ onQuestionAdde
       ...prev,
       [field]: value
     }));
+  };
+
+  const handleEndTimeChange = (field: keyof typeof endTime, value: number) => {
+    setEndTime(prev => {
+      const newEndTime = { ...prev, [field]: value };
+      
+      // Validate date values
+      const year = newEndTime.year;
+      const month = newEndTime.month;
+      const day = newEndTime.day;
+      const hour = newEndTime.hour;
+      const minute = newEndTime.minute;
+      
+      // Check if the date is valid
+      const date = new Date(year, month - 1, day, hour, minute);
+      
+      // Validate if the date is valid (not Invalid Date)
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date values:', { year, month, day, hour, minute });
+        return newEndTime; // Return without updating formData
+      }
+      
+      // Update formData with ISO string
+      setFormData(prevForm => ({
+        ...prevForm,
+        end_time: date.toISOString()
+      }));
+      
+      return newEndTime;
+    });
   };
 
   const handleImageUploaded = (imageUrl: string) => {
@@ -92,6 +134,16 @@ export const AddQuestionForm: React.FC<AddQuestionFormProps> = ({ onQuestionAdde
       return;
     }
 
+    if (!formData.end_time) {
+      toast.error('Please set an end time');
+      return;
+    }
+
+    if (!walletClient) {
+      toast.error('Please connect your wallet to create market contracts');
+      return;
+    }
+
     setSubmitting(true);
     
     try {
@@ -102,8 +154,36 @@ export const AddQuestionForm: React.FC<AddQuestionFormProps> = ({ onQuestionAdde
       }
       
       console.log('Submitting form data:', formData);
-      await addQuestion(formData);
-      toast.success('Question added successfully!');
+      
+      // Step 1: Create question, bet, and market in database
+      const questionId = await addQuestion(formData);
+      toast.success('Question created! Creating market contract...');
+      
+      // Step 2: Create real market contract
+      const marketAddress = await createMarketContract(
+        formData.title,
+        formData.coin,
+        formData.end_time,
+        walletClient
+      );
+      
+      // Step 3: Update market with contract address
+      const market = await getMarketByQuestionId(questionId);
+      if (market) {
+        // Get wallet address from wallet client
+        const provider = new ethers.BrowserProvider(walletClient as any);
+        const signer = await provider.getSigner();
+        const walletAddress = await signer.getAddress();
+        
+        await updateMarketWithContractAddress(
+          market.id,
+          marketAddress,
+          walletAddress
+        );
+        toast.success('Market contract created and linked successfully!');
+      } else {
+        toast.error('Market not found in database');
+      }
       
       // Reset form
       setFormData({
@@ -111,7 +191,16 @@ export const AddQuestionForm: React.FC<AddQuestionFormProps> = ({ onQuestionAdde
         description: '',
         category: 'match_result',
         image_url: '',
-        coin: 'PSG'
+        coin: 'PSG',
+        end_time: ''
+      });
+      
+      setEndTime({
+        year: new Date().getFullYear(),
+        month: new Date().getMonth() + 1,
+        day: Math.min(new Date().getDate() + 1, 28), // Use next day, max 28 to avoid month issues
+        hour: 12, // Default to noon
+        minute: 0
       });
       
       onQuestionAdded();
@@ -166,6 +255,105 @@ export const AddQuestionForm: React.FC<AddQuestionFormProps> = ({ onQuestionAdde
         </div>
       </div>
 
+      {/* End Time Selection */}
+      <div className="form-group">
+        <label className="form-label">
+          End Time *
+        </label>
+        <div className="end-time-grid">
+          <div className="time-input-group">
+            <label htmlFor="year">Year</label>
+            <input
+              type="number"
+              id="year"
+              value={endTime.year}
+              onChange={(e) => {
+                const value = parseInt(e.target.value);
+                if (value >= 2024 && value <= 2034) {
+                  handleEndTimeChange('year', value);
+                }
+              }}
+              min={2024}
+              max={2034}
+              className="time-input"
+            />
+          </div>
+          <div className="time-input-group">
+            <label htmlFor="month">Month</label>
+            <input
+              type="number"
+              id="month"
+              value={endTime.month}
+              onChange={(e) => {
+                const value = parseInt(e.target.value);
+                if (value >= 1 && value <= 12) {
+                  handleEndTimeChange('month', value);
+                }
+              }}
+              min={1}
+              max={12}
+              className="time-input"
+            />
+          </div>
+          <div className="time-input-group">
+            <label htmlFor="day">Day</label>
+            <input
+              type="number"
+              id="day"
+              value={endTime.day}
+              onChange={(e) => {
+                const value = parseInt(e.target.value);
+                if (value >= 1 && value <= 31) {
+                  handleEndTimeChange('day', value);
+                }
+              }}
+              min={1}
+              max={31}
+              className="time-input"
+            />
+          </div>
+          <div className="time-input-group">
+            <label htmlFor="hour">Hour</label>
+            <input
+              type="number"
+              id="hour"
+              value={endTime.hour}
+              onChange={(e) => {
+                const value = parseInt(e.target.value);
+                if (value >= 0 && value <= 23) {
+                  handleEndTimeChange('hour', value);
+                }
+              }}
+              min={0}
+              max={23}
+              className="time-input"
+            />
+          </div>
+          <div className="time-input-group">
+            <label htmlFor="minute">Minute</label>
+            <input
+              type="number"
+              id="minute"
+              value={endTime.minute}
+              onChange={(e) => {
+                const value = parseInt(e.target.value);
+                if (value >= 0 && value <= 59) {
+                  handleEndTimeChange('minute', value);
+                }
+              }}
+              min={0}
+              max={59}
+              className="time-input"
+            />
+          </div>
+        </div>
+        {formData.end_time && (
+          <div className="end-time-display">
+            <small>End Time: {new Date(formData.end_time).toLocaleString()}</small>
+          </div>
+        )}
+      </div>
+
       {/* Question Category */}
       <div className="form-group">
         <label className="form-label">
@@ -195,8 +383,8 @@ export const AddQuestionForm: React.FC<AddQuestionFormProps> = ({ onQuestionAdde
           id="description"
           value={formData.description || ''}
           onChange={(e) => handleInputChange('description', e.target.value)}
-          rows={4}
           className="form-textarea"
+          rows={4}
           placeholder="Provide detailed description of the prediction question..."
         />
       </div>
@@ -228,10 +416,10 @@ export const AddQuestionForm: React.FC<AddQuestionFormProps> = ({ onQuestionAdde
           {submitting ? (
             <>
               <span className="loading-spinner"></span>
-              Adding Question...
+              Creating Question & Market...
             </>
           ) : (
-            'Add Question'
+            'Add Question & Create Market'
           )}
         </button>
       </div>

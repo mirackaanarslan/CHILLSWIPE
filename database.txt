@@ -1,0 +1,82 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.admins (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  email text NOT NULL UNIQUE,
+  password_hash text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT admins_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.bets (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  question_id uuid NOT NULL,
+  wallet_address text NOT NULL,
+  outcome text NOT NULL CHECK (outcome = ANY (ARRAY['YES'::text, 'NO'::text])),
+  amount numeric NOT NULL,
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'won'::text, 'lost'::text, 'cancelled'::text])),
+  created_at timestamp with time zone DEFAULT now(),
+  resolved_at timestamp with time zone,
+  winnings numeric DEFAULT 0.00,
+  market_address text,
+  CONSTRAINT bets_pkey PRIMARY KEY (id),
+  CONSTRAINT bets_question_id_fkey FOREIGN KEY (question_id) REFERENCES public.questions(id)
+);
+CREATE TABLE public.markets (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  question_id uuid,
+  bet_id uuid,
+  token_address text NOT NULL,
+  token_symbol text NOT NULL CHECK (token_symbol = ANY (ARRAY['PSG'::text, 'BAR'::text])),
+  market_address text,
+  creator_address text NOT NULL,
+  end_time timestamp with time zone NOT NULL,
+  resolved boolean DEFAULT false,
+  outcome integer DEFAULT 0,
+  total_yes numeric DEFAULT 0,
+  total_no numeric DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT markets_pkey PRIMARY KEY (id),
+  CONSTRAINT markets_question_id_fkey FOREIGN KEY (question_id) REFERENCES public.questions(id),
+  CONSTRAINT markets_bet_id_fkey FOREIGN KEY (bet_id) REFERENCES public.bets(id)
+);
+CREATE TABLE public.question_markets (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  question_id uuid NOT NULL UNIQUE,
+  market_address character varying NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT question_markets_pkey PRIMARY KEY (id),
+  CONSTRAINT question_markets_question_id_fkey FOREIGN KEY (question_id) REFERENCES public.questions(id)
+);
+CREATE TABLE public.questions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text,
+  image_url text NOT NULL,
+  status text DEFAULT 'open'::text,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
+  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
+  category text NOT NULL DEFAULT 'match_result'::text,
+  coin text NOT NULL DEFAULT 'PSG'::text CHECK (coin = ANY (ARRAY['PSG'::text, 'BAR'::text])),
+  CONSTRAINT questions_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.users (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  wallet_address text NOT NULL UNIQUE,
+  username text,
+  avatar_url text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  total_swipes integer DEFAULT 0,
+  correct_predictions integer DEFAULT 0,
+  win_rate numeric DEFAULT 0.00,
+  total_winnings numeric DEFAULT 0.00,
+  favorite_team text,
+  bio text,
+  is_verified boolean DEFAULT false,
+  last_active timestamp with time zone DEFAULT now(),
+  role text DEFAULT 'user'::text CHECK (role = ANY (ARRAY['user'::text, 'admin'::text])),
+  CONSTRAINT users_pkey PRIMARY KEY (id)
+);

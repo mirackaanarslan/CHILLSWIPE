@@ -4,12 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
 import { PredictionMarket } from '@/contracts/PredictionMarket';
+import { getUnresolvedMarketsWithQuestions, updateMarketAddress } from '@/lib/admin';
+import { Market, Question } from '@/types/supabase';
 import toast from 'react-hot-toast';
 
-interface MarketInfo {
-  address: string;
-  coin: 'PSG' | 'BAR';
-  question: string;
+interface MarketInfo extends Market {
+  question: Question;
   totalYes: bigint;
   totalNo: bigint;
   endTime: bigint;
@@ -17,11 +17,6 @@ interface MarketInfo {
   outcome: number;
   creator: string;
 }
-
-const MARKET_ADDRESSES = {
-  PSG: '0xa57bef0f00F665112e2a102Fd3cDad260F097475',
-  BAR: '0x88C3c2D6D7A045ED8009435db32eAB6bed75F283'
-};
 
 export const ResolveBets: React.FC = () => {
   const [markets, setMarkets] = useState<MarketInfo[]>([]);
@@ -42,18 +37,50 @@ export const ResolveBets: React.FC = () => {
 
     try {
       setLoading(true);
-      console.log('🔄 Loading markets from addresses:', MARKET_ADDRESSES);
+      console.log('🔄 Loading unresolved markets from database...');
       
-      const marketPromises = Object.entries(MARKET_ADDRESSES).map(async ([coin, address]) => {
-        console.log(`🔄 Loading ${coin} market at ${address}...`);
+      // Get unresolved markets from database with question details
+      const dbMarkets = await getUnresolvedMarketsWithQuestions();
+      console.log('📋 Database markets found:', dbMarkets.length);
+      console.log('📋 Database markets data:', dbMarkets);
+      
+      // Debug: Check question data for each market
+      dbMarkets.forEach((market, index) => {
+        console.log(`🔍 Market ${index + 1} question data:`, {
+          marketId: market.id,
+          questionId: market.question_id,
+          question: market.question,
+          questionTitle: market.question?.title,
+          hasQuestion: !!market.question
+        });
+      });
+      
+      if (dbMarkets.length === 0) {
+        console.log('📋 No unresolved markets found');
+        setMarkets([]);
+        return;
+      }
+      
+      // Load contract data for each market
+      const marketPromises = dbMarkets.map(async (dbMarket) => {
+        console.log(`🔄 Processing market ${dbMarket.id}:`);
+        console.log(`   - Market address: ${dbMarket.market_address}`);
+        console.log(`   - Question ID: ${dbMarket.question_id}`);
+        console.log(`   - Token symbol: ${dbMarket.token_symbol}`);
+        
+        // If no market address, skip this market
+        if (!dbMarket.market_address) {
+          console.log(`⚠️ Market ${dbMarket.id} has no contract address, skipping`);
+          return null;
+        }
         
         try {
           // Convert wagmi client to ethers provider
           const provider = new ethers.BrowserProvider(publicClient as any);
-          const market = new PredictionMarket(address, provider);
+          const market = new PredictionMarket(dbMarket.market_address, provider);
           const data = await market.loadData();
           
-          console.log(`✅ ${coin} market data loaded:`, {
+          console.log(`✅ Market ${dbMarket.id} contract data loaded:`, {
             question: data.question,
             totalYes: data.totalYes.toString(),
             totalNo: data.totalNo.toString(),
@@ -65,15 +92,13 @@ export const ResolveBets: React.FC = () => {
           let creator = 'Unknown';
           try {
             creator = await market.contract.creator();
-            console.log(`📋 ${coin} market creator:`, creator);
+            console.log(`📋 Market ${dbMarket.id} creator:`, creator);
           } catch (error) {
-            console.error(`❌ Failed to get ${coin} creator:`, error);
+            console.error(`❌ Failed to get market ${dbMarket.id} creator:`, error);
           }
           
           return {
-            address,
-            coin: coin as 'PSG' | 'BAR',
-            question: data.question,
+            ...dbMarket,
             totalYes: data.totalYes,
             totalNo: data.totalNo,
             endTime: data.endTime,
@@ -82,24 +107,16 @@ export const ResolveBets: React.FC = () => {
             creator
           };
         } catch (error) {
-          console.error(`❌ Failed to load ${coin} market ${address}:`, error);
-          return {
-            address,
-            coin: coin as 'PSG' | 'BAR',
-            question: 'Failed to load question',
-            totalYes: BigInt(0),
-            totalNo: BigInt(0),
-            endTime: BigInt(0),
-            resolved: false,
-            outcome: 0,
-            creator: 'Unknown'
-          };
+          console.error(`❌ Failed to load market ${dbMarket.id} at ${dbMarket.market_address}:`, error);
+          return null;
         }
       });
 
       const marketData = await Promise.all(marketPromises);
-      console.log('✅ All markets loaded:', marketData);
-      setMarkets(marketData);
+      const validMarkets = marketData.filter(market => market !== null) as MarketInfo[];
+      console.log('✅ Valid markets loaded:', validMarkets.length);
+      console.log('✅ Valid markets data:', validMarkets);
+      setMarkets(validMarkets);
     } catch (error) {
       console.error('❌ Failed to load markets:', error);
       toast.error('Failed to load prediction markets');
@@ -173,173 +190,9 @@ export const ResolveBets: React.FC = () => {
         console.error('❌ Failed to get endTime:', error);
       }
 
-      try {
-        const question = await market.contract.question();
-        console.log('📋 Question:', question);
-      } catch (error) {
-        console.error('❌ Failed to get question:', error);
-      }
-
-      // Test other contract functions
-      try {
-        const totalYes = await market.contract.totalYes();
-        console.log('📋 Total YES:', totalYes.toString());
-      } catch (error) {
-        console.error('❌ Failed to get totalYes:', error);
-      }
-
-      try {
-        const totalNo = await market.contract.totalNo();
-        console.log('📋 Total NO:', totalNo.toString());
-      } catch (error) {
-        console.error('❌ Failed to get totalNo:', error);
-      }
-
-      // Test if contract is properly initialized
-      try {
-        const initialized = await market.contract.initialized();
-        console.log('📋 Contract Initialized:', initialized);
-      } catch (error) {
-        console.log('📋 Contract has no initialized function (this is normal)');
-      }
-
-      // Check if contract exists and is deployed
-      try {
-        const code = await provider.getCode(marketAddress);
-        console.log('📋 Contract Code Length:', code.length);
-        console.log('📋 Contract Deployed?', code !== '0x');
-      } catch (error) {
-        console.error('❌ Failed to check contract code:', error);
-      }
-
-      // Check current block and network
-      try {
-        const blockNumber = await provider.getBlockNumber();
-        console.log('📋 Current Block:', blockNumber);
-        const network = await provider.getNetwork();
-        console.log('📋 Network:', network);
-      } catch (error) {
-        console.error('❌ Failed to get network info:', error);
-      }
-
-      // Debug: Check contract ABI and interface
-      console.log('🔄 Checking contract interface...');
-      console.log('📋 Contract Interface:', market.contract.interface);
-      console.log('📋 Contract ABI:', market.contract.interface.format());
-      
-      // Try to get function fragment
-      try {
-        const resolveFragment = market.contract.interface.getFunction('resolveMarket');
-        console.log('📋 Resolve Function Fragment:', resolveFragment);
-        console.log('📋 Function Signature:', resolveFragment.format());
-      } catch (error) {
-        console.error('❌ Failed to get function fragment:', error);
-      }
-
-      // Try to call the function directly with low-level approach
-      console.log('🔄 Trying low-level call...');
-      try {
-        const data = market.contract.interface.encodeFunctionData('resolveMarket', [outcomeIsYes]);
-        console.log('📋 Encoded Data:', data);
-        
-        // Try to call without gas estimation first
-        const result = await provider.call({
-          to: marketAddress,
-          data: data,
-          from: address
-        });
-        console.log('📋 Low-level call result:', result);
-      } catch (lowLevelError) {
-        console.error('❌ Low-level call failed:', lowLevelError);
-        console.error('Low-level error details:', {
-          code: lowLevelError.code,
-          message: lowLevelError.message,
-          data: lowLevelError.data
-        });
-      }
-      
-      console.log('🔄 Calling resolveMarket...');
-      console.log('Parameters:', { outcomeIsYes });
-      
-      // Try to call the function with more explicit parameters
-      console.log('🔄 Preparing transaction...');
-      const encodedData = market.contract.interface.encodeFunctionData('resolveMarket', [outcomeIsYes]);
-      console.log('📋 Transaction Data:', encodedData);
-      
-      // Get current gas price for reference
-      try {
-        const gasPrice = await provider.getFeeData();
-        console.log('📋 Current Gas Price:', gasPrice);
-      } catch (error) {
-        console.log('📋 Using default gas price');
-      }
-      
-      // Try to send transaction with explicit gas limit
-      console.log('🔄 Sending transaction...');
-      
-      // Create transaction data manually
-      const txData = market.contract.interface.encodeFunctionData('resolveMarket', [outcomeIsYes]);
-      console.log('📋 Final Transaction Data:', txData);
-      
-      // Create contract instance directly with signer
-      console.log('🔄 Creating contract instance with signer...');
-      console.log('📋 Market Address:', marketAddress);
-      console.log('📋 User Address:', address);
-      
-      const contract = new ethers.Contract(
-        marketAddress,
-        [
-          'function question() public view returns (string)',
-          'function totalYes() public view returns (uint256)',
-          'function totalNo() public view returns (uint256)',
-          'function endTime() public view returns (uint256)',
-          'function resolved() public view returns (bool)',
-          'function outcome() public view returns (uint8)',
-          'function creator() public view returns (address)',
-          'function getUserBets(address user) public view returns (tuple(uint8 choice, uint256 amount)[])',
-          'function placeBet(bool voteYes, uint256 amount) public',
-          'function resolveMarket(bool outcomeIsYes) public',
-          'function claim() public',
-          'event BetPlaced(address indexed user, bool voteYes, uint256 amount)',
-          'event MarketResolved(bool outcomeIsYes)'
-        ],
-        signer
-      );
-      
-      console.log('✅ Contract instance created:', contract);
-      
-      // Check contract state before calling resolveMarket
-      console.log('🔄 Checking contract state...');
-      try {
-        const creator = await contract.creator();
-        console.log('📋 Contract Creator:', creator);
-        console.log('📋 User Address:', address);
-        console.log('📋 Is Creator?', creator.toLowerCase() === address.toLowerCase());
-      } catch (error) {
-        console.error('❌ Failed to get creator:', error);
-      }
-      
-      try {
-        const resolved = await contract.resolved();
-        console.log('📋 Already Resolved?', resolved);
-      } catch (error) {
-        console.error('❌ Failed to check resolved status:', error);
-      }
-      
-      try {
-        const endTime = await contract.endTime();
-        const currentTime = Math.floor(Date.now() / 1000);
-        console.log('📋 End Time:', endTime.toString());
-        console.log('📋 Current Time:', currentTime);
-        console.log('📋 Time Remaining:', Number(endTime) - currentTime, 'seconds');
-        console.log('📋 Can Resolve?', currentTime >= Number(endTime));
-      } catch (error) {
-        console.error('❌ Failed to get endTime:', error);
-      }
-      
       // Call resolveMarket directly with explicit gas limit
       console.log('🔄 Calling resolveMarket...');
-      const tx = await contract.resolveMarket(outcomeIsYes, {
+      const tx = await market.contract.resolveMarket(outcomeIsYes, {
         gasLimit: 500000 // Bypass gas estimation
       });
       console.log('✅ Transaction sent:', tx);
@@ -455,11 +308,11 @@ export const ResolveBets: React.FC = () => {
     <div className="resolve-bets">
       <div className="markets-grid">
         {markets.map((market) => (
-          <div key={market.address} className="market-card">
+          <div key={market.id} className="market-card">
             <div className="market-header">
               <div className="market-coin">
-                <span className="coin-icon">{market.coin === 'PSG' ? '🔴' : '🔵'}</span>
-                <span className="coin-name">{market.coin}</span>
+                <span className="coin-icon">{market.token_symbol === 'PSG' ? '🔴' : '🔵'}</span>
+                <span className="coin-name">{market.token_symbol}</span>
               </div>
               <div className={`market-status ${market.resolved ? 'resolved' : 'active'}`}>
                 {market.resolved ? '✅ Resolved' : '⏳ Active'}
@@ -467,9 +320,28 @@ export const ResolveBets: React.FC = () => {
             </div>
 
             <div className="market-content">
-              <h3 className="market-question">{market.question}</h3>
+              <h3 className="market-question">
+                {market.question?.title || 'Question title not available'}
+                {!market.question?.title && (
+                  <span style={{ fontSize: '12px', color: '#ff6b6b', display: 'block' }}>
+                    Debug: Question object: {JSON.stringify(market.question)}
+                  </span>
+                )}
+              </h3>
               
               <div className="market-stats">
+                <div className="stat-row">
+                  <span className="stat-label">Market Address:</span>
+                  <span className="stat-value market-address">
+                    {market.market_address}
+                  </span>
+                </div>
+                <div className="stat-row">
+                  <span className="stat-label">Question:</span>
+                  <span className="stat-value question-title">
+                    {market.question?.title || `Question ID: ${market.question_id}`}
+                  </span>
+                </div>
                 <div className="stat-row">
                   <span className="stat-label">Creator:</span>
                   <span className="stat-value creator-address">
@@ -530,18 +402,18 @@ export const ResolveBets: React.FC = () => {
                             </div>
                           )}
                           <button
-                            onClick={() => handleResolveMarket(market.address, true)}
-                            disabled={resolving === market.address}
+                            onClick={() => handleResolveMarket(market.market_address!, true)}
+                            disabled={resolving === market.market_address}
                             className="resolve-btn resolve-yes"
                           >
-                            {resolving === market.address ? 'Resolving...' : 'Resolve YES'}
+                            {resolving === market.market_address ? 'Resolving...' : 'Resolve YES'}
                           </button>
                           <button
-                            onClick={() => handleResolveMarket(market.address, false)}
-                            disabled={resolving === market.address}
+                            onClick={() => handleResolveMarket(market.market_address!, false)}
+                            disabled={resolving === market.market_address}
                             className="resolve-btn resolve-no"
                           >
-                            {resolving === market.address ? 'Resolving...' : 'Resolve NO'}
+                            {resolving === market.market_address ? 'Resolving...' : 'Resolve NO'}
                           </button>
                         </>
                       );
@@ -563,8 +435,8 @@ export const ResolveBets: React.FC = () => {
           <div className="empty-icon">
             <span className="empty-symbol">🏁</span>
           </div>
-          <h3 className="empty-title">No prediction markets found</h3>
-          <p className="empty-description">Create some prediction questions first!</p>
+          <h3 className="empty-title">No unresolved prediction markets found</h3>
+          <p className="empty-description">All markets have been resolved or no markets exist yet!</p>
         </div>
       )}
     </div>

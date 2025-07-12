@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Question } from '@/types/supabase';
-import { deleteQuestion, updateQuestion } from '@/lib/admin';
+import React, { useState, useEffect } from 'react';
+import { Question, Market } from '@/types/supabase';
+import { deleteQuestion, updateQuestion, getMarketByQuestionId } from '@/lib/admin';
 import { storageService } from '@/lib/supabase-service';
 import toast from 'react-hot-toast';
 
@@ -10,6 +10,10 @@ interface QuestionListProps {
   questions: Question[];
   loading: boolean;
   onQuestionUpdated: () => void;
+}
+
+interface QuestionWithMarket extends Question {
+  market?: Market;
 }
 
 const CATEGORY_ICONS: { [key: string]: string } = {
@@ -82,6 +86,8 @@ export const QuestionList: React.FC<QuestionListProps> = ({
   onQuestionUpdated 
 }) => {
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const [questionsWithMarkets, setQuestionsWithMarkets] = useState<QuestionWithMarket[]>([]);
+  const [marketsLoading, setMarketsLoading] = useState(true);
   const [editForm, setEditForm] = useState({
     title: '',
     description: '',
@@ -89,6 +95,41 @@ export const QuestionList: React.FC<QuestionListProps> = ({
     coin: 'PSG' as 'PSG' | 'BAR'
   });
   const [saving, setSaving] = useState(false);
+
+  // Fetch market data for each question
+  useEffect(() => {
+    const fetchMarkets = async () => {
+      if (questions.length === 0) {
+        setQuestionsWithMarkets([]);
+        setMarketsLoading(false);
+        return;
+      }
+
+      setMarketsLoading(true);
+      try {
+        const questionsWithMarketData = await Promise.all(
+          questions.map(async (question) => {
+            try {
+              const market = await getMarketByQuestionId(question.id);
+              return { ...question, market };
+            } catch (error) {
+              console.warn(`Failed to fetch market for question ${question.id}:`, error);
+              return { ...question, market: undefined };
+            }
+          })
+        );
+        
+        setQuestionsWithMarkets(questionsWithMarketData);
+      } catch (error) {
+        console.error('Error fetching markets:', error);
+        setQuestionsWithMarkets(questions.map(q => ({ ...q, market: undefined })));
+      } finally {
+        setMarketsLoading(false);
+      }
+    };
+
+    fetchMarkets();
+  }, [questions]);
 
   const handleDeleteQuestion = async (question: Question) => {
     if (!confirm('Are you sure you want to delete this question? This action cannot be undone.')) {
@@ -149,7 +190,8 @@ export const QuestionList: React.FC<QuestionListProps> = ({
     setSaving(true);
 
     try {
-      // Prepare update data
+      // Prepare update data - only allow title, description, category, and coin
+      // end_time cannot be changed as per contract restrictions
       const updateData: any = {
         title: editForm.title.trim(),
         category: editForm.category,
@@ -183,7 +225,7 @@ export const QuestionList: React.FC<QuestionListProps> = ({
     setEditForm({ title: '', description: '', category: '', coin: 'PSG' });
   };
 
-  if (loading) {
+  if (loading || marketsLoading) {
     return (
       <div className="question-list">
         {Array.from({ length: 3 }).map((_, i) => (
@@ -206,7 +248,7 @@ export const QuestionList: React.FC<QuestionListProps> = ({
     );
   }
 
-  if (questions.length === 0) {
+  if (questionsWithMarkets.length === 0) {
     return (
       <div className="empty-state">
         <div className="empty-icon">
@@ -220,7 +262,7 @@ export const QuestionList: React.FC<QuestionListProps> = ({
 
   return (
     <div className="question-list">
-      {questions.map((question) => (
+      {questionsWithMarkets.map((question) => (
         <div key={question.id} className="question-card">
           {editingQuestion?.id === question.id ? (
             // Edit Mode
@@ -364,6 +406,63 @@ export const QuestionList: React.FC<QuestionListProps> = ({
                     />
                   </div>
                 )}
+
+                {/* Market Information Section */}
+                {question.market && (
+                  <div className="market-info-section">
+                    <h4 className="market-info-title">📊 Market Information</h4>
+                    <div className="market-info-grid">
+                      <div className="market-info-item">
+                        <span className="market-info-label">Market ID:</span>
+                        <span className="market-info-value">{question.market.id.slice(0, 8)}...</span>
+                      </div>
+                      <div className="market-info-item">
+                        <span className="market-info-label">Token Symbol:</span>
+                        <span className="market-info-value">
+                          <span className={`token-badge ${question.market.token_symbol}`}>
+                            {question.market.token_symbol === 'PSG' ? '🔴' : '🔵'} {question.market.token_symbol}
+                          </span>
+                        </span>
+                      </div>
+                      <div className="market-info-item">
+                        <span className="market-info-label">Token Address:</span>
+                        <span className="market-info-value address">
+                          {question.market.token_address.slice(0, 6)}...{question.market.token_address.slice(-4)}
+                        </span>
+                      </div>
+                      {question.market.market_address && (
+                        <div className="market-info-item">
+                          <span className="market-info-label">Market Contract:</span>
+                          <span className="market-info-value address">
+                            {question.market.market_address.slice(0, 6)}...{question.market.market_address.slice(-4)}
+                          </span>
+                        </div>
+                      )}
+                      {question.market.creator_address && (
+                        <div className="market-info-item">
+                          <span className="market-info-label">Creator:</span>
+                          <span className="market-info-value address">
+                            {question.market.creator_address.slice(0, 6)}...{question.market.creator_address.slice(-4)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="market-info-item">
+                        <span className="market-info-label">Status:</span>
+                        <span className={`market-status-badge ${question.market.resolved ? 'resolved' : 'open'}`}>
+                          {question.market.resolved ? '✅ Resolved' : '⏳ Open'}
+                        </span>
+                      </div>
+                      <div className="market-info-item">
+                        <span className="market-info-label">Total YES:</span>
+                        <span className="market-info-value">{question.market.total_yes || '0'}</span>
+                      </div>
+                      <div className="market-info-item">
+                        <span className="market-info-label">Total NO:</span>
+                        <span className="market-info-value">{question.market.total_no || '0'}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="question-footer">
@@ -375,6 +474,11 @@ export const QuestionList: React.FC<QuestionListProps> = ({
                   <span className="question-date">
                     Updated: {new Date(question.updated_at).toLocaleDateString()}
                   </span>
+                  {question.end_time && (
+                    <span className="question-end-time">
+                      End Time: {new Date(question.end_time).toLocaleString()}
+                    </span>
+                  )}
                 </div>
               </div>
             </>
