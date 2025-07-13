@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { Question, CreateQuestionData, Market, CreateMarketData, Bet, CreateBetData } from '@/types/supabase'
+import { Question, CreateQuestionData, Market, CreateMarketData, Bet, CreateBetData, User } from '@/types/supabase'
 
 // Questions CRUD operations
 export const questionsService = {
@@ -108,11 +108,21 @@ export const betsService = {
     return data || []
   },
 
-  // Get bets by wallet address
+  // Get bets by wallet address with question details
   async getByWalletAddress(walletAddress: string): Promise<Bet[]> {
     const { data, error } = await supabase
       .from('bets')
-      .select('*')
+      .select(`
+        *,
+        questions:question_id (
+          id,
+          title,
+          description,
+          category,
+          coin,
+          end_time
+        )
+      `)
       .eq('wallet_address', walletAddress)
       .order('created_at', { ascending: false })
     
@@ -155,6 +165,8 @@ export const betsService = {
 
   // Update bet
   async update(id: string, updates: Partial<Bet>): Promise<Bet> {
+    console.log(`🔄 Updating bet ${id} with:`, updates);
+    
     const { data, error } = await supabase
       .from('bets')
       .update(updates)
@@ -163,9 +175,17 @@ export const betsService = {
       .single()
     
     if (error) {
-      console.error('Error updating bet:', error)
+      console.error('❌ Error updating bet:', error);
+      console.error('❌ Error details:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      });
       throw error
     }
+    
+    console.log(`✅ Successfully updated bet ${id}:`, data);
     return data
   },
 
@@ -180,6 +200,116 @@ export const betsService = {
       console.error('Error deleting bet:', error)
       throw error
     }
+  },
+
+  // Update bet statuses for a question when it's resolved
+  async updateBetStatusesForQuestion(questionId: string, outcome: 'YES' | 'NO'): Promise<void> {
+    console.log(`Updating bet statuses for question ${questionId} with outcome ${outcome}`);
+    
+    // Get all bets for this question
+    const bets = await this.getByQuestionId(questionId);
+    console.log(`Found ${bets.length} bets to update`);
+    
+    // Update each bet based on outcome
+    for (const bet of bets) {
+      const newStatus = bet.outcome === outcome ? 'won' : 'lost';
+      const winnings = bet.outcome === outcome ? bet.amount : '0';
+      
+      console.log(`Updating bet ${bet.id}: outcome=${bet.outcome}, newStatus=${newStatus}, winnings=${winnings}`);
+      
+      await this.update(bet.id, {
+        status: newStatus,
+        winnings: winnings,
+        resolved_at: new Date().toISOString()
+      });
+    }
+    
+    console.log(`Successfully updated ${bets.length} bet statuses`);
+  }
+}
+
+// Users CRUD operations
+export const usersService = {
+  // Get user by wallet address
+  async getByWalletAddress(walletAddress: string): Promise<User | null> {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('wallet_address', walletAddress.toLowerCase())
+      .single()
+    
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No user found
+        return null
+      }
+      console.error('Error fetching user by wallet address:', error)
+      throw error
+    }
+    return data
+  },
+
+  // Create new user
+  async create(walletAddress: string): Promise<User> {
+    const { data, error } = await supabase
+      .from('users')
+      .insert([{
+        wallet_address: walletAddress.toLowerCase(),
+        total_swipes: 0,
+        correct_predictions: 0,
+        win_rate: '0.00',
+        total_winnings: '0.00',
+        is_premium: false
+      }])
+      .select()
+      .single()
+    
+    if (error) {
+      console.error('Error creating user:', error)
+      throw error
+    }
+    return data
+  },
+
+  // Get or create user (upsert)
+  async getOrCreate(walletAddress: string): Promise<User> {
+    console.log('🔍 Getting or creating user for wallet:', walletAddress)
+    
+    // Try to get existing user
+    const existingUser = await this.getByWalletAddress(walletAddress)
+    if (existingUser) {
+      console.log('✅ Found existing user:', existingUser.id)
+      return existingUser
+    }
+    
+    // Create new user if not found
+    console.log('🆕 Creating new user for wallet:', walletAddress)
+    const newUser = await this.create(walletAddress)
+    console.log('✅ Created new user:', newUser.id)
+    return newUser
+  },
+
+  // Update user
+  async update(walletAddress: string, updates: Partial<User>): Promise<User> {
+    const { data, error } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('wallet_address', walletAddress.toLowerCase())
+      .select()
+      .single()
+    
+    if (error) {
+      console.error('Error updating user:', error)
+      throw error
+    }
+    return data
+  },
+
+  // Update last active
+  async updateLastActive(walletAddress: string): Promise<void> {
+    await this.update(walletAddress, {
+      last_active: new Date().toISOString()
+    })
   }
 }
 

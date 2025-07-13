@@ -53,23 +53,11 @@ export const addQuestion = async (questionData: CreateQuestionData): Promise<str
     const question = await questionsService.create(questionData)
     console.log('✅ Question added successfully with ID:', question.id)
     
-    // Create a default bet for this question
-    const defaultBetData: CreateBetData = {
-      question_id: question.id,
-      wallet_address: '0x0000000000000000000000000000000000000000', // Placeholder
-      outcome: 'YES',
-      amount: '0',
-      market_address: undefined
-    }
-    
-    console.log('🔄 Creating default bet with data:', defaultBetData)
-    const bet = await betsService.create(defaultBetData)
-    console.log('✅ Default bet created successfully with ID:', bet.id)
+
     
     // Create the market in database first (without contract address)
     const marketData: CreateMarketData = {
       question_id: question.id,
-      bet_id: bet.id,
       token_address: TOKEN_ADDRESSES[questionData.coin],
       token_symbol: questionData.coin,
       creator_address: '0x0000000000000000000000000000000000000000', // Will be set when contract is deployed
@@ -80,11 +68,6 @@ export const addQuestion = async (questionData: CreateQuestionData): Promise<str
     const market = await marketsService.create(marketData)
     console.log('✅ Market created in database with ID:', market.id)
     console.log('📋 Market data:', market)
-    
-    // Update bet with market address
-    console.log('🔄 Updating bet with market address:', market.id)
-    await betsService.update(bet.id, { market_address: market.id })
-    console.log('✅ Bet updated with market address')
     
     console.log('=== END ADD QUESTION DEBUG ===')
     return question.id

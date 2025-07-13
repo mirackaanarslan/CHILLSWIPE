@@ -4436,6 +4436,10 @@ body {
   background: linear-gradient(135deg, #10B981 0%, #059669 100%);
 }
 
+.status-icon.lost {
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+}
+
 .status-info {
   flex: 1;
 }
@@ -5033,5 +5037,83 @@ body {
   
   .ai-chatbot-button-text {
     font-size: 12px;
+  }
+}
+
+/* Claimable Section Styles */
+.claimable-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin: 20px 0;
+  backdrop-filter: blur(10px);
+}
+
+.claimable-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.claimable-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.claimable-label {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.claimable-amount {
+  font-size: 20px;
+  font-weight: 700;
+  color: #22c55e;
+}
+
+.claim-all-button {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.claim-all-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(34, 197, 94, 0.4);
+}
+
+.claim-all-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@media (max-width: 768px) {
+  .claimable-section {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .claimable-info {
+    justify-content: center;
+  }
+
+  .claim-all-button {
+    width: 100%;
+    max-width: 200px;
   }
 }

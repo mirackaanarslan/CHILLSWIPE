@@ -6,6 +6,7 @@ import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
 import { PredictionMarket } from '@/contracts/PredictionMarket';
 import { getUnresolvedMarketsWithQuestions, updateMarketAddress } from '@/lib/admin';
 import { Market, Question } from '@/types/supabase';
+import { betsService } from '@/lib/supabase-service';
 import toast from 'react-hot-toast';
 
 interface MarketInfo extends Market {
@@ -216,7 +217,27 @@ export const ResolveBets: React.FC = () => {
       const receipt = await tx.wait();
       console.log('✅ Transaction confirmed:', receipt);
       
-      toast.success(`Market resolved successfully! Outcome: ${outcomeIsYes ? 'YES' : 'NO'}`);
+      // Update bet statuses for this question
+      try {
+        console.log('🔄 Updating bet statuses for question...');
+        const outcome = outcomeIsYes ? 'YES' : 'NO';
+        
+        // Find the market to get question_id
+        const marketInfo = allMarkets.find(m => m.market_address === marketAddress);
+        if (marketInfo) {
+          await betsService.updateBetStatusesForQuestion(marketInfo.question_id, outcome);
+          console.log('✅ Bet statuses updated successfully');
+          toast.success(`Market resolved and bet statuses updated! Outcome: ${outcome}`);
+        } else {
+          console.log('⚠️ Could not find market info for bet status update');
+          toast.success(`Market resolved successfully! Outcome: ${outcome}`);
+        }
+      } catch (betUpdateError) {
+        console.error('❌ Failed to update bet statuses:', betUpdateError);
+        toast.success(`Market resolved successfully! Outcome: ${outcomeIsYes ? 'YES' : 'NO'}`);
+        toast.error('Warning: Bet statuses could not be updated');
+      }
+      
       loadMarkets(); // Reload markets to show updated status
     } catch (error: any) {
       console.error('❌ RESOLVE MARKET ERROR:', error);

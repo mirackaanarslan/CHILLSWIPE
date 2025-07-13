@@ -15,21 +15,23 @@ import { Menu, X } from 'lucide-react';
 import { useContracts } from '@/hooks/useContracts';
 import { MarketCard } from '@/components/MarketCard';
 import AIChatbot from '@/components/AIChatbot';
+import { betsService, usersService } from '@/lib/supabase-service';
 
 import { ethers } from 'ethers';
 
 // Contract ABIs
 const PREDICTION_MARKET_ABI = [
-  'function placeBet(bool voteYes, uint256 amount) external',
+  'function question() public view returns (string)',
   'function totalYes() public view returns (uint256)',
   'function totalNo() public view returns (uint256)',
-  'function question() public view returns (string memory)',
   'function endTime() public view returns (uint256)',
-  'function getUserBets(address user) public view returns (tuple(uint8 choice, uint256 amount)[])',
-  'function resolveMarket(bool outcomeIsYes) external',
-  'function initialized() public view returns (bool)',
+  'function resolved() public view returns (bool)',
+  'function outcome() public view returns (uint8)',
   'function creator() public view returns (address)',
-  'function token() public view returns (address)',
+  'function getUserBets(address user) public view returns (tuple(uint8 choice, uint256 amount)[])',
+  'function placeBet(bool voteYes, uint256 amount) public',
+  'function resolveMarket(bool outcomeIsYes) public',
+  'function claim() public',
   'event BetPlaced(address indexed user, bool voteYes, uint256 amount)',
   'event MarketResolved(bool outcomeIsYes)'
 ];
@@ -642,345 +644,171 @@ export default function App() {
     }
   }, [connectedWallet, fetchMarkets, fetchUserBalance]);
 
-  const handleWalletChange = (address: string | null) => {
+  const handleWalletChange = async (address: string | null) => {
     setConnectedWallet(address);
-    // Clear approval status when wallet changes
-    if (!address) {
+    
+    if (address) {
+      // Create or get user when wallet connects
+      try {
+        console.log('🔗 Wallet connected, getting/creating user...');
+        const user = await usersService.getOrCreate(address);
+        console.log('✅ User ready:', user.id);
+        
+        // Update last active
+        await usersService.updateLastActive(address);
+      } catch (error) {
+        console.error('❌ Error handling wallet connection:', error);
+      }
+    } else {
+      // Clear approval status when wallet disconnects
       setApprovalStatus({});
     }
   };
 
   // Shared bet placement function to prevent duplicate code
   const placeBetOnMarket = async (item: any, voteYes: boolean) => {
-    console.log('=== STARTING BET PLACEMENT ===');
-    console.log(`Placing bet: ${voteYes ? 'YES' : 'NO'} on item:`, item);
-    console.log('Current betAmount:', betAmount);
-    console.log('Connected wallet:', connectedWallet);
-    console.log('Item coin:', item.originalData?.coin);
-    console.log('Item market address:', item.originalData?.market_address);
-    console.log('=== END INITIAL LOGS ===');
+    console.log('🎯 BET PLACEMENT STARTED');
+    console.log(`Betting ${voteYes ? 'YES' : 'NO'} on:`, item.title);
+    console.log('Amount:', betAmount);
+    console.log('Wallet:', connectedWallet);
     
-    // Prevent duplicate transactions
     if (isPlacingBet) {
-      console.log('Bet already in progress, skipping...');
+      console.log('❌ Bet already in progress');
       return;
     }
     
-    // Check if wallet is connected
     if (!connectedWallet) {
-      console.log('No wallet connected, showing warning but continuing');
-      console.warn('Wallet not connected - bet will not be recorded');
+      console.log('❌ No wallet connected');
       nextCard();
       return;
     }
     
-    // Check if we have a market address for this question
     const marketAddress = await getMarketAddressForQuestion(item.id, item.title);
     if (!marketAddress) {
-      console.log('No market address found for question:', item.id, 'title:', item.title);
+      console.log('❌ No market address found');
       alert('This question is not available for betting yet');
       nextCard();
       return;
     }
     
-    console.log('Market address for question:', marketAddress);
-    console.log('Using market address from getMarketAddressForQuestion:', marketAddress);
-    console.log('Item original data market address:', item.originalData?.market_address);
-    
     setIsPlacingBet(true);
     
     try {
-      // Increment swipe count first
+      // Increment swipe count
       if (isAuthenticated && user) {
-        console.log('Incrementing swipes for user:', user.id);
         await incrementSwipes();
       }
       
-      // Get signer from wallet
-      if (!publicClient) {
-        throw new Error('No public client available');
-      }
-      
-      console.log('=== CONTRACT CREATION ===');
-      console.log('Public client:', publicClient);
-      
-      // Use window.ethereum directly for provider
+      // Get provider and signer
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      console.log('Provider created:', provider);
-      console.log('Signer created:', signer);
-      console.log('Signer address:', await signer.getAddress());
       
-      // Create contract instances
-      console.log('Creating market contract with address:', marketAddress);
-      console.log('Using ABI:', PREDICTION_MARKET_ABI);
+      // Create contracts
       const market = new ethers.Contract(marketAddress, PREDICTION_MARKET_ABI, signer);
-      console.log('Market contract created:', market);
-      console.log('Market contract target:', market.target);
-      console.log('Market contract interface:', market.interface);
-      
-      // Determine which fan token to use based on the question
       const fanTokenAddress = item.originalData?.coin === 'BAR' ? BAR_FAN_TOKEN_ADDRESS : PSG_FAN_TOKEN_ADDRESS;
-      console.log('Using fan token address:', fanTokenAddress);
-      console.log('For coin:', item.originalData?.coin);
-      console.log('BAR_FAN_TOKEN_ADDRESS:', BAR_FAN_TOKEN_ADDRESS);
-      console.log('PSG_FAN_TOKEN_ADDRESS:', PSG_FAN_TOKEN_ADDRESS);
-      
       const fanToken = new ethers.Contract(fanTokenAddress, FAN_TOKEN_ABI, signer);
-      console.log('Fan token contract created:', fanToken);
-      console.log('Fan token contract target:', fanToken.target);
-      console.log('=== END CONTRACT CREATION ===');
       
-      // Check if contract is initialized
-      console.log('=== CONTRACT INITIALIZATION CHECK ===');
-      console.log('Checking contract initialization for address:', marketAddress);
-      console.log('Coin:', item.originalData?.coin);
-      
-      try {
-        console.log('Calling market.initialized()...');
-        const initialized = await market.initialized();
-        console.log('Contract initialized result:', initialized);
-        
-        if (!initialized) {
-          console.error('Contract is not initialized!');
-          throw new Error('Contract is not initialized');
-        }
-        
-        console.log('Calling market.creator()...');
-        const creator = await market.creator();
-        console.log('Contract creator:', creator);
-        
-        console.log('Calling market.token()...');
-        const tokenAddress = await market.token();
-        console.log('Contract token address:', tokenAddress);
-        console.log('Expected fan token address:', fanTokenAddress);
-        console.log('Token addresses match:', tokenAddress.toLowerCase() === fanTokenAddress.toLowerCase());
-        
-        console.log('Contract is properly initialized');
-        console.log('=== END INITIALIZATION CHECK ===');
-      } catch (initError) {
-        console.error('=== CONTRACT INITIALIZATION ERROR ===');
-        console.error('Contract initialization check failed:', initError);
-        console.error('Error message:', initError.message);
-        console.error('Error code:', initError.code);
-        console.error('Error data:', initError.data);
-        console.error('Market address:', marketAddress);
-        console.error('Coin:', item.originalData?.coin);
-        console.error('=== END INITIALIZATION ERROR ===');
-        throw new Error('Contract initialization check failed: ' + initError.message);
-      }
-      
-      // Convert amount to wei (18 decimals)
+      // Convert amount to wei
       const amountInWei = ethers.parseUnits(betAmount.toString(), 18);
       
-      console.log('Placing bet with amount:', amountInWei.toString());
-      
-      // Check user balance
+      // Check balance
       const userBalance = await fanToken.balanceOf(connectedWallet);
-      console.log('User balance:', userBalance.toString());
-      
       if (userBalance < amountInWei) {
         const tokenName = item.originalData?.coin === 'BAR' ? 'BAR' : 'PSG';
-        throw new Error(`Insufficient balance. You have ${ethers.formatUnits(userBalance, 18)} ${tokenName}, but trying to bet ${betAmount} ${tokenName}`);
+        throw new Error(`Insufficient balance. You have ${ethers.formatUnits(userBalance, 18)} ${tokenName}`);
       }
       
-      // Check allowance
+      // Check and handle approval
       const allowance = await fanToken.allowance(connectedWallet, marketAddress);
-      console.log('Current allowance:', allowance.toString());
-      
       if (allowance < amountInWei) {
-        console.log('Approval needed, requesting approval...');
-        
-              // Check if we're already in the process of approving this market
-      if (approvalStatus[marketAddress]) {
-        console.log('Approval already in progress for this market, waiting...');
-        // Wait a bit and check again
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        const newAllowance = await fanToken.allowance(connectedWallet, marketAddress);
-        if (newAllowance < amountInWei) {
-          throw new Error('Approval is taking too long. Please try again.');
-        }
-      } else {
-        // Set approval status to prevent duplicate approvals
-        setApprovalStatus(prev => ({ ...prev, [marketAddress]: true }));
-        
-        try {
-          const approveTx = await fanToken.approve(marketAddress, amountInWei);
-          console.log('Approval transaction sent:', approveTx.hash);
-          
-          // Wait for approval confirmation
-          const approveReceipt = await approveTx.wait();
-          console.log('Approval confirmed on-chain:', approveReceipt.hash);
-          
-          // Double-check allowance after approval
-          const finalAllowance = await fanToken.allowance(connectedWallet, marketAddress);
-          console.log('Final allowance after approval:', finalAllowance.toString());
-          
-          if (finalAllowance < amountInWei) {
-            throw new Error('Approval was confirmed but allowance is still insufficient');
+        console.log('🔐 Approval needed...');
+        if (approvalStatus[marketAddress]) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          const newAllowance = await fanToken.allowance(connectedWallet, marketAddress);
+          if (newAllowance < amountInWei) {
+            throw new Error('Approval is taking too long. Please try again.');
           }
-        } finally {
-          // Clear approval status
-          setApprovalStatus(prev => ({ ...prev, [marketAddress]: false }));
+        } else {
+          setApprovalStatus(prev => ({ ...prev, [marketAddress]: true }));
+          try {
+            const approveTx = await fanToken.approve(marketAddress, amountInWei);
+            await approveTx.wait();
+          } finally {
+            setApprovalStatus(prev => ({ ...prev, [marketAddress]: false }));
+          }
         }
       }
-      }
       
-      // Place the bet
-      console.log('Placing bet on market...');
-      console.log('Market address:', marketAddress);
-      console.log('Vote yes:', voteYes);
-      console.log('Amount in wei:', amountInWei.toString());
-      
-      // Log the transaction data that will be sent
-      const placeBetData = market.interface.encodeFunctionData('placeBet', [voteYes, amountInWei]);
-      console.log('Transaction data:', placeBetData);
-      console.log('Market interface:', market.interface);
-      console.log('Market interface functions:', Object.keys(market.interface.fragments));
-      
-      // Check if placeBet function exists in ABI
-      const placeBetFunction = market.interface.getFunction('placeBet');
-      console.log('placeBet function:', placeBetFunction);
-      console.log('placeBet function signature:', placeBetFunction?.format());
-      
-
-      
+      // Check market status before placing bet
+      console.log('🔍 Checking market status...');
       try {
-        console.log('=== TRANSACTION EXECUTION ===');
-        console.log('Coin:', item.originalData?.coin);
-        console.log('Market address:', marketAddress);
-        console.log('Vote yes:', voteYes);
-        console.log('Amount in wei:', amountInWei.toString());
+        const isResolved = await market.resolved();
+        const endTime = await market.endTime();
+        const currentTime = Math.floor(Date.now() / 1000);
         
-        // For Barcelona contracts, send transaction directly to avoid contract method issues
-        if (item.originalData?.coin === 'BAR') {
-          console.log('=== BARCELONA CONTRACT APPROACH ===');
-          console.log('Using direct transaction approach for Barcelona');
-          
-          // Encode the function call manually
-          const encodedData = market.interface.encodeFunctionData('placeBet', [voteYes, amountInWei]);
-          console.log('Encoded data for direct transaction:', encodedData);
-          console.log('Function signature: placeBet(bool,uint256)');
-          console.log('Parameters:', [voteYes, amountInWei]);
-          
-          // Send transaction directly
-          const tx = {
-            to: marketAddress,
-            data: encodedData,
-            gasLimit: 500000
-          };
-          
-          console.log('Direct transaction object:', tx);
-          console.log('Signer address:', await signer.getAddress());
-          console.log('Signer provider:', signer.provider);
-          
-          const betTx = await signer.sendTransaction(tx);
-          console.log('Direct transaction sent:', betTx.hash);
-          console.log('Transaction object:', betTx);
-          
-          const receipt = await betTx.wait();
-          console.log('Direct transaction receipt:', receipt);
-          console.log('Transaction status:', receipt.status);
-          console.log('Transaction logs:', receipt.logs);
-          console.log('Gas used:', receipt.gasUsed.toString());
-          
-          if (receipt.status === 0) {
-            console.error('Direct transaction failed - status 0');
-            console.error('Receipt details:', receipt);
-            throw new Error('Direct transaction failed on chain - status 0');
-          }
-          
-          console.log('Barcelona bet confirmed successfully!');
-          alert('Barcelona bet placed successfully! Transaction: ' + betTx.hash);
-          nextCard();
-          return;
+        console.log('📋 Market status:', {
+          isResolved,
+          endTime: endTime.toString(),
+          currentTime,
+          timeRemaining: Number(endTime) - currentTime
+        });
+        
+        if (isResolved) {
+          throw new Error('Market is already resolved');
         }
         
-        // For PSG contracts, use direct transaction approach (same as Barcelona)
-        console.log('=== PSG CONTRACT APPROACH ===');
-        console.log('Using direct transaction approach for PSG');
-        
-        // Encode the function call manually
-        const encodedData = market.interface.encodeFunctionData('placeBet', [voteYes, amountInWei]);
-        console.log('Encoded data for direct transaction:', encodedData);
-        console.log('Function signature: placeBet(bool,uint256)');
-        console.log('Parameters:', [voteYes, amountInWei]);
-        
-        // Send transaction directly
-        const tx = {
-          to: marketAddress,
-          data: encodedData,
-          gasLimit: 500000
-        };
-        
-        console.log('Direct transaction object:', tx);
-        console.log('Signer address:', await signer.getAddress());
-        console.log('Signer provider:', signer.provider);
-        
-        const betTx = await signer.sendTransaction(tx);
-        console.log('Direct transaction sent:', betTx.hash);
-        console.log('Transaction object:', betTx);
-        
-        const receipt = await betTx.wait();
-        console.log('Direct transaction receipt:', receipt);
-        console.log('Transaction status:', receipt.status);
-        console.log('Transaction logs:', receipt.logs);
-        console.log('Gas used:', receipt.gasUsed.toString());
-        
-        if (receipt.status === 0) {
-          console.error('Direct transaction failed - status 0');
-          console.error('Receipt details:', receipt);
-          throw new Error('Direct transaction failed on chain - status 0');
+        if (currentTime >= Number(endTime)) {
+          throw new Error('Market has ended');
         }
-        
-        console.log('PSG bet confirmed successfully!');
-        console.log('Transaction logs:', receipt.logs);
-        
-        // Refresh markets after successful bet
-        if (connectedWallet) {
-          await fetchMarkets(connectedWallet);
-        }
-        
-        alert('Bet placed successfully! Transaction: ' + betTx.hash);
-        
-        // Only move to next card after successful bet
-        nextCard();
-      } catch (txError) {
-        console.error('=== TRANSACTION ERROR DETAILS ===');
-        console.error('Error object:', txError);
-        console.error('Error message:', txError.message);
-        console.error('Error code:', txError.code);
-        console.error('Error data:', txError.data);
-        console.error('Error transaction:', txError.transaction);
-        console.error('Error receipt:', txError.receipt);
-        console.error('Error reason:', txError.reason);
-        console.error('Error invocation:', txError.invocation);
-        console.error('Error revert:', txError.revert);
-        
-        // Check if it's a contract revert
-        if (txError.data) {
-          console.error('Contract revert data:', txError.data);
-        }
-        
-        // Try to decode revert reason if available
-        if (txError.reason) {
-          console.error('Revert reason:', txError.reason);
-        }
-        
-        // Log the exact function call that failed
-        console.error('Failed function call details:');
-        console.error('- Function: placeBet');
-        console.error('- Parameters:', [voteYes, amountInWei]);
-        console.error('- Market address:', marketAddress);
-        console.error('- Coin:', item.originalData?.coin);
-        console.error('- Approach:', item.originalData?.coin === 'BAR' ? 'Direct transaction' : 'Contract method');
-        
-        console.error('=== END TRANSACTION ERROR ===');
-        throw txError;
+      } catch (statusError) {
+        console.error('❌ Market status check failed:', statusError);
+        throw new Error('Cannot place bet: Market is not available');
       }
+      
+      // Place bet
+      console.log('🚀 Placing bet on blockchain...');
+      const encodedData = market.interface.encodeFunctionData('placeBet', [voteYes, amountInWei]);
+      const tx = {
+        to: marketAddress,
+        data: encodedData,
+        gasLimit: 500000
+      };
+      
+      const betTx = await signer.sendTransaction(tx);
+      console.log('📝 Transaction sent:', betTx.hash);
+      
+      const receipt = await betTx.wait();
+      console.log('✅ Transaction confirmed:', receipt.hash);
+      
+      if (receipt.status === 0) {
+        // Try to get more details about the revert
+        console.error('❌ Transaction reverted. Receipt:', receipt);
+        throw new Error('Transaction failed on chain - Market may be closed or resolved');
+      }
+      
+      // Save to database
+      console.log('💾 Saving bet to database...');
+      const betData = await betsService.create({
+        question_id: item.id,
+        wallet_address: connectedWallet.toLowerCase(),
+        outcome: voteYes ? 'YES' : 'NO',
+        amount: betAmount.toString(),
+        market_address: marketAddress,
+        transaction_hash: betTx.hash,
+        coin: item.originalData?.coin || 'PSG'
+      });
+      console.log('✅ Bet saved to database:', betData);
+      
+      // Refresh markets
+      if (connectedWallet) {
+        await fetchMarkets(connectedWallet);
+      }
+      
+      alert('Bet placed successfully! Transaction: ' + betTx.hash);
+      nextCard();
       
     } catch (error) {
-      console.error('Error placing bet:', error);
+      console.error('❌ Bet placement error:', error);
       alert('Failed to place bet: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsPlacingBet(false);
