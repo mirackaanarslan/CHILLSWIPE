@@ -38,6 +38,13 @@ const nextConfig = {
           resourceRegExp: /^(undici|fs|net|tls|crypto|stream|zlib|http|https|assert|os|path)$/,
         })
       );
+
+      // Ignore problematic worker files
+      config.plugins.push(
+        new webpack.IgnorePlugin({
+          resourceRegExp: /HeartbeatWorker\.js$/,
+        })
+      );
     }
 
     // Add module rules for problematic syntax
@@ -57,6 +64,23 @@ const nextConfig = {
           plugins: [
             '@babel/plugin-transform-private-methods',
             '@babel/plugin-transform-class-properties'
+          ]
+        }
+      }
+    });
+
+    // Fix for HeartbeatWorker and other worker files
+    config.module.rules.push({
+      test: /HeartbeatWorker\.js$/,
+      use: {
+        loader: 'babel-loader',
+        options: {
+          presets: [
+            ['@babel/preset-env', {
+              targets: {
+                browsers: ['> 1%', 'last 2 versions']
+              }
+            }]
           ]
         }
       }
