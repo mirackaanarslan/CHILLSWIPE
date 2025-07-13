@@ -71,13 +71,9 @@ const AdminPage: React.FC = () => {
         <div className="header-left">
           <div className="logo-section">
             <div className="logo-container">
-              <div className="logo-icon">
-                <div className="logo-pulse"></div>
-                <span className="logo-symbol">AP</span>
-              </div>
+              <img src="/logo.png" alt="CHILLSWIPE Logo" className="logo-image" />
               <div className="logo-text">
-                <h1 className="header-title">PSG Admin</h1>
-                <p className="header-subtitle">Manage prediction questions</p>
+                <h1 className="header-title">CHILLSWIPE ADMIN</h1>
               </div>
             </div>
           </div>

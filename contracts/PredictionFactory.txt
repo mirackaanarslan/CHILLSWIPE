@@ -1,0 +1,36 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import "./PredictionMarket.sol";
+
+contract PredictionFactory {
+    address[] public allMarkets;
+
+    event MarketCreated(address indexed marketAddress, address indexed creator);
+
+    function createMarket(
+        string memory question,
+        address token,
+        uint256 endTime
+    ) external returns (address) {
+        PredictionMarket market = new PredictionMarket();
+        market.initialize(question, token, endTime, msg.sender);
+
+        allMarkets.push(address(market));
+        emit MarketCreated(address(market), msg.sender);
+        return address(market);
+    }
+
+    function getAllMarkets() external view returns (address[] memory) {
+        return allMarkets;
+    }
+
+    function getMarket(uint index) external view returns (address) {
+        require(index < allMarkets.length, "Invalid index");
+        return allMarkets[index];
+    }
+
+    function getMarketCount() external view returns (uint) {
+        return allMarkets.length;
+    }
+}

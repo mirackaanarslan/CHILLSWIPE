@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { User, Edit3, Save, X, TrendingUp, Award, Clock, CheckCircle, DollarSign } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface UserProfileProps {
   isOpen: boolean;
@@ -204,13 +205,15 @@ export default function UserProfile({ isOpen, onClose }: UserProfileProps) {
       
       console.log('✅ CLAIM PROCESS COMPLETED');
       
+      toast.success('Successfully claimed all rewards!');
+      
       // Refresh data
       await fetchBetHistory();
       await fetchClaimableAmount();
       
     } catch (error) {
       console.error('❌ CLAIM PROCESS ERROR:', error);
-      alert('Failed to claim: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error('Failed to claim: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsClaiming(false);
     }
@@ -363,7 +366,7 @@ export default function UserProfile({ isOpen, onClose }: UserProfileProps) {
               <p className="stat-label">Win Rate</p>
             </div>
             <div className="stat-card">
-              <p className="stat-value total-amount">{totalBetAmount} CHZ</p>
+              <p className="stat-value total-amount">{totalBetAmount}</p>
               <p className="stat-label">Total Prediction</p>
             </div>
           </div>
@@ -375,7 +378,7 @@ export default function UserProfile({ isOpen, onClose }: UserProfileProps) {
                 <DollarSign className="w-5 h-5 text-green-600" />
                 <div className="claimable-details">
                   <p className="claimable-label">Claimable Rewards</p>
-                  <p className="claimable-amount">{claimableAmount} CHZ</p>
+                  <p className="claimable-amount">{claimableAmount}</p>
                 </div>
               </div>
               <button 
@@ -467,7 +470,7 @@ export default function UserProfile({ isOpen, onClose }: UserProfileProps) {
                         </span>
                       </div>
                       <div className="bet-amount">
-                        {bet.amount} CHZ
+                        {bet.amount}
                       </div>
                     </div>
                     
@@ -486,7 +489,7 @@ export default function UserProfile({ isOpen, onClose }: UserProfileProps) {
                         <div className="bet-outcome">
                           <span className="outcome-label">Winnings:</span>
                           <span className="outcome-value">
-                            {bet.winnings} CHZ
+                            {bet.winnings}
                           </span>
                         </div>
                       )}

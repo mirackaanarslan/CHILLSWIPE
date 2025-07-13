@@ -1,0 +1,104 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+contract PredictionMarket {
+    enum Choice { None, Yes, No }
+
+    struct Bet {
+        Choice choice;
+        uint256 amount;
+    }
+
+    string public question;
+    IERC20 public token;
+    address public creator;
+    uint256 public endTime;
+    bool public initialized;
+
+    uint256 public totalYes;
+    uint256 public totalNo;
+    bool public resolved;
+    Choice public outcome;
+
+    mapping(address => Bet[]) public bets;
+    mapping(address => bool) public claimed;
+
+    event BetPlaced(address indexed user, bool voteYes, uint256 amount);
+    event MarketResolved(bool outcomeIsYes);
+
+    function initialize(
+        string memory _question,
+        address _token,
+        uint256 _endTime,
+        address _creator
+    ) external {
+        require(!initialized, "Already initialized");
+        initialized = true;
+
+        question = _question;
+        token = IERC20(_token);
+        endTime = _endTime;
+        creator = _creator;
+    }
+
+    function placeBet(bool voteYes, uint256 amount) external {
+        require(block.timestamp < endTime, "Betting closed");
+        require(amount > 0, "Invalid amount");
+
+        token.transferFrom(msg.sender, address(this), amount);
+
+        Choice betChoice = voteYes ? Choice.Yes : Choice.No;
+        bets[msg.sender].push(Bet(betChoice, amount));
+
+        if (voteYes) {
+            totalYes += amount;
+        } else {
+            totalNo += amount;
+        }
+
+        emit BetPlaced(msg.sender, voteYes, amount);
+    }
+
+    function getUserBets(address user) external view returns (Bet[] memory) {
+        return bets[user];
+    }
+
+    function resolveMarket(bool outcomeIsYes) external {
+        require(!resolved, "Already resolved");
+
+        resolved = true;
+        outcome = outcomeIsYes ? Choice.Yes : Choice.No;
+
+        emit MarketResolved(outcomeIsYes);
+    }
+
+    function claim() external {
+        require(resolved, "Market not resolved yet");
+        require(!claimed[msg.sender], "Already claimed");
+
+        Bet[] memory userBets = bets[msg.sender];
+        require(userBets.length > 0, "No bets placed");
+
+        uint256 userWinnings;
+        uint256 totalWinning = outcome == Choice.Yes ? totalYes : totalNo;
+        uint256 totalPool = totalYes + totalNo;
+
+        for (uint256 i = 0; i < userBets.length; i++) {
+            Bet memory b = userBets[i];
+            if (b.choice == outcome) {
+                uint256 reward = (b.amount * totalPool) / totalWinning;
+                userWinnings += reward;
+            }
+        }
+
+        require(userWinnings > 0, "No winnings");
+        claimed[msg.sender] = true;
+        token.transfer(msg.sender, userWinnings);
+    }
+
+    function getTotalPool() public view returns (uint256) {
+        return totalYes + totalNo;
+    }
+}

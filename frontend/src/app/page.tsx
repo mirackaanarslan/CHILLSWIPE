@@ -16,6 +16,7 @@ import { useContracts } from '@/hooks/useContracts';
 import { MarketCard } from '@/components/MarketCard';
 import AIChatbot from '@/components/AIChatbot';
 import { betsService, usersService } from '@/lib/supabase-service';
+import toast from 'react-hot-toast';
 
 import { ethers } from 'ethers';
 
@@ -804,12 +805,12 @@ export default function App() {
         await fetchMarkets(connectedWallet);
       }
       
-      alert('Bet placed successfully! Transaction: ' + betTx.hash);
+      toast.success(`Bet placed successfully! Transaction: ${betTx.hash.slice(0, 10)}...`);
       nextCard();
       
     } catch (error) {
       console.error('❌ Bet placement error:', error);
-      alert('Failed to place bet: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error('Failed to place bet: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsPlacingBet(false);
     }

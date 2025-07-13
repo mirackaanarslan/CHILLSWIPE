@@ -8,8 +8,13 @@ import { headers } from 'next/headers'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Chiliz Prediction Market',
-  description: 'A scalable prediction market app',
+  title: 'CHILLSWIPE - Fan Token Prediction Market',
+  description: 'A scalable prediction market app for football fans',
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
 }
 
 export default function RootLayout({
